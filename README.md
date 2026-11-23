@@ -1,6 +1,18 @@
 # ENGR7001 robotic perception
 
-This archive tracks the development of tabletop block pose estimation, segmentation and multi-object tracking for an intent-aware shared-manipulation project. The ROS 2 perception nodes publish observations and RViz displays.
+This project estimates the poses of tabletop blocks and tracks them for intent-aware shared manipulation. The ROS 2 perception nodes publish observations and RViz displays.
+
+[`versions/v2/`](versions/v2/) is the maintained version. The other version folders are archived snapshots.
+
+## Recorded lab demo
+
+![Wrist and tripod replay of V2 tracking three touching wooden blocks](media/wp3-three-touching-blocks.gif)
+
+V2 replay of a stationary lab recording from 19 November 2026. The wrist view proposes the block poses and the tripod view verifies the layout. Across 60 consecutive replay epochs (4.3 seconds), `whole_partition_mv` resolves all three touching blocks, holds IDs B01–B03 and reports zero ambiguous clusters. Cross-view ID recovery after occlusion remains open.
+
+![Three-camera stationary baseline with published jenga_table block poses and separate illustrative xArm 6 robot-base view](media/wp3-stationary-baseline-scene.jpg)
+
+A separate stationary recording from 12 November 2026 shows the three lab RGB streams (wrist, tripod and third camera), the published `jenga_table` poses for blocks `B01`–`B03`, and a separate illustrative xArm 6 robot-base view from WP2's digital twin at its saved home pose. Robot-to-table alignment remains unverified.
 
 | Snapshot | Main change |
 |---|---|
