@@ -38,7 +38,7 @@ from .side_verifier import (
 
 ALL_POLICIES = (
     "depth_only",
-    "astra_permissive",
+    "permissive_rgb_seam",
     "merged_corroborated",
     "merged_wrist_rgb",
     "generic_watershed",
@@ -149,7 +149,7 @@ def _resolve_oversized_region(
 
     if policy == "depth_only":
         eligible = [h for h in hyps if h.has_validated_depth_step]
-    elif policy == "astra_permissive":
+    elif policy == "permissive_rgb_seam":
         # Mirrors heightmap_seam_pipeline.py:653 (depth_step OR depth_trough OR rgb_ok)
         eligible = [h for h in hyps if (h.has_validated_depth_step or h.has_depth_trough or h.has_strong_rgb)]
     elif policy == "merged_corroborated":
@@ -477,10 +477,10 @@ def run_perception_epoch(
                     ambiguous.append(amb)
         timings["proposals_and_rgb_ms"] = round((time.perf_counter() - t_seg0) * 1000.0, 3)
 
-    # Stage 5: Optional cropped §7a silhouette/depth verifier (veto-only on sampled FRESH + splits)
+    # Stage 5: Optional cropped silhouette/depth verifier (veto-only on sampled FRESH + splits)
     t_ver0 = time.perf_counter()
     verifier_stats = {"checked": 0, "vetoed": 0, "skipped_unseen": len(confident_with_src)}
-    if config.use_side_verifier and side_data is not None and policy not in ("astra_permissive",):
+    if config.use_side_verifier and side_data is not None and policy not in ("permissive_rgb_seam",):
         verifier = CroppedSilhouetteVerifier(th)
         kept, vetoed, verifier_stats = verifier.verify_confident_outputs(confident_with_src, side_data, block, epoch_id=epoch_id)
         for vf, vreason in vetoed:

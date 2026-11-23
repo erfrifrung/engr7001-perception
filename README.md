@@ -20,7 +20,7 @@ bash versions/v2/scripts/compare_bag.sh /path/to/recording --out results/replay 
   --views both --labels /path/to/labels.csv
 ```
 
-V2 runs the same replay epochs through six policies. `depth_only` and `generic_watershed` are segmentation baselines. `astra_permissive` and `merged_wrist_rgb` test seam-based splits with different thresholds. `merged_corroborated` checks RGB seams against side-view evidence, and `whole_partition_mv` scores competing block layouts across views. Use `--policies` to select a subset.
+V2 runs the same replay epochs through six policies. `depth_only` and `generic_watershed` are segmentation baselines. `permissive_rgb_seam` and `merged_wrist_rgb` test seam-based splits with different thresholds. `merged_corroborated` checks RGB seams against side-view evidence, and `whole_partition_mv` scores competing block layouts across views. Use `--policies` to select a subset.
 
 The runner prints and saves `decision_table.md`, with per-run frame coverage and p50/p95/p99 processing time. With labels, it reports 15 mm XY matches, flags frames where one prediction region covers multiple labelled blocks, and counts false-confident frames and unmatched detections. XY error is summarised over matched predictions. `comparison_report.json` contains additional metrics, including ambiguity counts and yaw error where yaw labels are available. Per-frame outputs are saved in `predictions/`.
 

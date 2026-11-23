@@ -19,7 +19,7 @@ def build_atomic_scene_payload(
     code_hash: str,
     camera_health: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Assemble one atomic scene snapshot combining Gemini's contract fields & Astra's 6-DOF bitmask."""
+    """Assemble one atomic scene snapshot combining the per-track contract fields and the 6-DOF validity bitmask."""
     yaw_sym = cfg.block.yaw_symmetry_deg
     z_ok_dwell = epoch.dwell is None or epoch.dwell.stationary
 

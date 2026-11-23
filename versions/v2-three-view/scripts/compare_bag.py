@@ -17,8 +17,9 @@ import numpy as np
 
 IMPL_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = IMPL_ROOT.parent
-V1_DIR = OUTPUT_ROOT / "WP3-Live-Implementation"
-V2_DIR = OUTPUT_ROOT / "WP3-Heightmap-2026-11-18" / "v2"
+V1_DIR = OUTPUT_ROOT / "v1"
+REPO_ROOT = OUTPUT_ROOT.parent
+V2_DIR = REPO_ROOT / "prototypes" / "WP3-Heightmap-2026-11-18" / "v2"
 if str(IMPL_ROOT) not in sys.path:
     sys.path.insert(0, str(IMPL_ROOT))
 
@@ -220,7 +221,7 @@ def _try_run_frozen_v2(
     dropped: dict[str, int],
     warmup_frames: int = 0,
 ) -> dict[str, Any]:
-    """Run unmodified frozen WP3-Heightmap-2026-11-18/v2 H1 & H2 on the exact same epochs."""
+    """Run unmodified frozen heightmap prototype (prototypes/WP3-Heightmap-2026-11-18/v2) H1 & H2 on the exact same epochs."""
     v2_path = V2_DIR / "wp3_heightmap.py"
     if not v2_path.is_file():
         return {"available": False, "reason": f"missing {v2_path}"}
@@ -301,7 +302,7 @@ def _try_run_frozen_v1(
     dropped: dict[str, int],
     warmup_frames: int = 0,
 ) -> dict[str, Any]:
-    """Run unmodified frozen WP3-Live-Implementation (v1) controls on identical scheduled epochs."""
+    """Run unmodified frozen V1 (versions/v1) controls on identical scheduled epochs."""
     if not (V1_DIR / "wp3_live" / "__init__.py").is_file():
         return {"available": False, "reason": f"missing {V1_DIR / 'wp3_live'}"}
 
@@ -399,7 +400,7 @@ def main(argv=None) -> None:
     ap.add_argument("--pitch-mm", type=float, default=20.0)
     ap.add_argument("--labels", default="")
     ap.add_argument("--labels-bag", default="")
-    ap.add_argument("--policies", default="depth_only,astra_permissive,merged_corroborated,merged_wrist_rgb,whole_partition_mv,generic_watershed")
+    ap.add_argument("--policies", default="depth_only,permissive_rgb_seam,merged_corroborated,merged_wrist_rgb,whole_partition_mv,generic_watershed")
     ap.add_argument("--views", default="wrist,both", help="View ablations when side camera exists: wrist,side,both")
     ap.add_argument("--max-frames", type=int, default=0)
     ap.add_argument("--warmup-frames", type=int, default=5, help="Initial OK frames excluded from timing p50/p95/p99 percentiles")
@@ -613,7 +614,7 @@ def main(argv=None) -> None:
                 replace(cfg, enable_temporal_skip=True), synth_dwell_if_missing=True,
             )
 
-    # Run unmodified frozen v1 controls (WP3-Live-Implementation) when present on disk
+    # Run unmodified frozen V1 controls (versions/v1) when present on disk
     if cam_wrist is not None and wrist_cam_data.pairs:
         v1_res = _try_run_frozen_v1(
             epochs, cam_wrist, cam_side, T_wrist_tbl, T_side_tbl, args.config,

@@ -8,7 +8,7 @@ With Python, NumPy, SciPy, OpenCV and pytest installed, work from one version di
 
 ```bash
 cd versions/v2
-python3 -m pytest -q tests -k 'not ros2_display_node'
+python3 -m pytest -q tests --ignore=tests/test_ros2_display_node.py
 python3 scripts/verify_zero_moveit.py
 python3 scripts/run_printed_jenga_suite.py --out results/synthetic
 ```

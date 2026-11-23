@@ -8,7 +8,7 @@ Usage: bash versions/v1/scripts/launch_live.sh [options]
 Launch the live WP3 perception display. Start your camera publishers first.
 
 Options:
-  --policy NAME     Policy (default: merged_corroborated; also merged_wrist_rgb, depth_only, astra_permissive, generic_watershed)
+  --policy NAME     Policy (default: merged_corroborated; also merged_wrist_rgb, depth_only, permissive_rgb_seam, generic_watershed)
   --config PATH     Config JSON (default: printed_jenga_live.json)
   --save-dir PATH   Directory to save live overlays, JSONL predictions & timings
   --wrist-ns NS     Wrist camera namespace (default: /perception/wrist)

@@ -4,7 +4,7 @@
 
 | Content | Source and scope |
 |---|---|
-| V1 and V2 | Shadi’s separate `WP3-Live-Implementation` and `WP3-Live-Implementation-v2` folders. Includes source, ROS 2 overlays, algorithm presets, launch and replay scripts and tests. |
+| V1 and V2 | The original separate `WP3-Live-Implementation` and `WP3-Live-Implementation-v2` development folders. Includes source, ROS 2 overlays, algorithm presets, launch and replay scripts and tests. |
 | Both three-view snapshots | Shadi’s initial WP3 handoff and the expanded handoff copy. Archived separately because the expanded copy changes three-view verification, overlay, replay and tests. |
 | Wrist-only and heightmap prototypes | Selected offline source and tests from the 18 November development work and read-only bag/projection helpers from the 12 November analysis. Historical paths and relative references in the prototype code describe the original workspace; the associated recordings and labels stay with that workspace. |
 | Twin-facing additions | Shadi’s handoff identifies the standalone `fit_table_tf.py`, `wp3_table_tf.py`, `wp3_link.py`, `wp3_scene_bridge.py` and `test_wp3_offline.py` as WP3 additions to Hazem’s twin. Includes the WP3 RViz display configuration. |
