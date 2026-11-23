@@ -50,7 +50,7 @@ _RNG_TRIPLES_DEFAULT = np.random.default_rng(18).integers(0, 2048, size=(120, 3)
 
 ALL_POLICIES = (
     "depth_only",
-    "astra_permissive",
+    "permissive_rgb_seam",
     "merged_corroborated",
     "merged_wrist_rgb",
     "whole_partition_mv",
@@ -256,7 +256,7 @@ def _resolve_oversized_region(
 
     if policy == "depth_only":
         eligible = [h for h in hyps if h.has_validated_depth_step]
-    elif policy == "astra_permissive":
+    elif policy == "permissive_rgb_seam":
         eligible = [h for h in hyps if (h.has_validated_depth_step or h.has_depth_trough or h.has_strong_rgb)]
     elif policy == "merged_corroborated":
         eligible = [
@@ -413,7 +413,7 @@ def run_perception_epoch(
     if third is not None:
         # The temporal cache only fingerprints the wrist and the first fixed camera.
         temporal_cache = None
-        if policy in ("depth_only", "generic_watershed", "astra_permissive"):
+        if policy in ("depth_only", "generic_watershed", "permissive_rgb_seam"):
             view_diag["third_cut_status"] = "policy_uses_no_third_cut_evidence"
         elif primary.role != "wrist" or primary.T_table_cam is None:
             view_diag["third_cut_status"] = "no_registered_primary_wrist"
@@ -720,10 +720,10 @@ def run_perception_epoch(
                     ambiguous.append(amb)
         timings["proposals_and_rgb_ms"] = round((time.perf_counter() - t_seg0) * 1000.0, 3)
 
-    # Stage 5: Optional cropped §7a silhouette/depth verifier (veto-only on sampled FRESH + splits)
+    # Stage 5: Optional cropped silhouette/depth verifier (veto-only on sampled FRESH + splits)
     t_ver0 = time.perf_counter()
     verifier_stats = {"checked": 0, "vetoed": 0, "skipped_unseen": len(confident_with_src)}
-    if config.use_side_verifier and side_data is not None and policy not in ("astra_permissive",):
+    if config.use_side_verifier and side_data is not None and policy not in ("permissive_rgb_seam",):
         verifier = CroppedSilhouetteVerifier(th)
         kept, vetoed, verifier_stats = verifier.verify_confident_outputs(confident_with_src, side_data, block, epoch_id=epoch_id)
         for vf, vreason in vetoed:

@@ -31,7 +31,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 
 
 def _ensure_wp3_live_on_path() -> None:
-    """Locate WP3-Live-Implementation root so wp3_live works with both symlink and installed trees."""
+    """Locate the WP3 live snapshot root so wp3_live works with both symlink and installed trees."""
     for p in Path(__file__).resolve().parents:
         if (p / "wp3_live" / "__init__.py").is_file():
             if str(p) not in sys.path:

@@ -1,4 +1,4 @@
-"""Static zero-MoveIt & zero-actuation safety verifier for WP3-Live-Implementation."""
+"""Static zero-MoveIt & zero-actuation safety verifier for this WP3 live perception snapshot."""
 from __future__ import annotations
 
 import ast

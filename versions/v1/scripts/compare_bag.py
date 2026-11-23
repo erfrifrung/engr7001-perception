@@ -16,7 +16,8 @@ import numpy as np
 
 IMPL_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = IMPL_ROOT.parent
-V2_DIR = OUTPUT_ROOT / "WP3-Heightmap-2026-11-18" / "v2"
+REPO_ROOT = OUTPUT_ROOT.parent
+V2_DIR = REPO_ROOT / "prototypes" / "WP3-Heightmap-2026-11-18" / "v2"
 if str(IMPL_ROOT) not in sys.path:
     sys.path.insert(0, str(IMPL_ROOT))
 
@@ -103,7 +104,7 @@ def _try_run_frozen_v2(
     frame_mode: str,
     dropped: dict[str, int],
 ) -> dict[str, Any]:
-    """Run unmodified frozen WP3-Heightmap-2026-11-18/v2 H1 & H2 on the exact same epochs."""
+    """Run unmodified frozen heightmap prototype (prototypes/WP3-Heightmap-2026-11-18/v2) H1 & H2 on the exact same epochs."""
     v2_path = V2_DIR / "wp3_heightmap.py"
     if not v2_path.is_file():
         return {"available": False, "reason": f"missing {v2_path}"}
@@ -222,7 +223,7 @@ def main(argv=None) -> None:
     ap.add_argument("--pitch-mm", type=float, default=20.0)
     ap.add_argument("--labels", default="")
     ap.add_argument("--labels-bag", default="")
-    ap.add_argument("--policies", default="depth_only,astra_permissive,merged_corroborated,merged_wrist_rgb,generic_watershed")
+    ap.add_argument("--policies", default="depth_only,permissive_rgb_seam,merged_corroborated,merged_wrist_rgb,generic_watershed")
     ap.add_argument("--views", default="wrist,both", help="View ablations when side camera exists: wrist,side,both")
     ap.add_argument("--max-frames", type=int, default=0)
     args = ap.parse_args(argv)

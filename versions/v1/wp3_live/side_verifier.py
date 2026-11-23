@@ -1,4 +1,4 @@
-"""Fixed-side facade detector, cross-view corroboration/contradiction & cropped §7a silhouette verifier."""
+"""Fixed-side facade detector, cross-view corroboration/contradiction & cropped silhouette verifier."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -282,9 +282,9 @@ def detect_side_facade_slots(
 
 
 class CroppedSilhouetteVerifier:
-    """Switchable §7a cropped CPU second-view silhouette/depth verifier with veto-only authority.
+    """Switchable cropped CPU second-view silhouette/depth verifier with veto-only authority.
 
-    Follows Astra's sampling rule (EVALUATION_AND_DECISIONS.md:36): evaluates difficult confident
+    Sampling rule: evaluates difficult confident
     splits PLUS a frozen deterministic random subset of FRESH non-splits (never already-AMBIGUOUS).
     """
 
