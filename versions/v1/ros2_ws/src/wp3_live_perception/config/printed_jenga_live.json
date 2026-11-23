@@ -1,0 +1,48 @@
+{
+  "preset": "printed_jenga",
+  "profile_name": "printed_jenga_live",
+  "frame_id": "jenga_table",
+  "roi_xyz_min": [-0.16, -0.16, -0.02],
+  "roi_xyz_max": [0.16, 0.16, 0.30],
+  "row_origin_xyz_m": [0.0, 0.0, 0.0],
+  "row_yaw_deg": 0.0,
+  "use_roi_precrop": true,
+  "roi_pad_px": 14,
+  "use_side_verifier": true,
+  "require_fk_for_moving_wrist": true,
+  "require_unique_square_evidence": true,
+  "enable_robot_self_filter": true,
+  "tcp_offset_z_m": 0.242,
+  "calib_epoch": "unverified_update_after_s01",
+  "block": {
+    "name": "printed_jenga",
+    "length_m": 0.0750,
+    "width_m": 0.0250,
+    "height_m": 0.0150,
+    "edge_loss_m": 0.0030,
+    "size_tol": 0.22,
+    "min_fill": 0.58,
+    "square_symmetry": false,
+    "layers": 18
+  },
+  "wrist": {
+    "role": "wrist",
+    "namespace": "/perception/wrist",
+    "width": 1280,
+    "height": 720,
+    "fps": 15,
+    "depth_scale_m": 0.001,
+    "min_depth_m": 0.18,
+    "max_depth_m": 1.60
+  },
+  "side": {
+    "role": "tripod",
+    "namespace": "/perception/tripod",
+    "width": 640,
+    "height": 480,
+    "fps": 15,
+    "depth_scale_m": 0.001,
+    "min_depth_m": 0.18,
+    "max_depth_m": 1.80
+  }
+}

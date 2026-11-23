@@ -1,0 +1,15 @@
+{
+  "preset": "historical_props_12nov",
+  "profile_name": "historical_props_12nov",
+  "frame_id": "jenga_table",
+  "roi_xyz_min": [-0.105, -0.180, -0.025],
+  "roi_xyz_max": [0.095, 0.065, 0.120],
+  "row_origin_xyz_m": [-0.008, -0.103, 0.0],
+  "row_yaw_deg": 90.0,
+  "use_roi_precrop": true,
+  "use_side_verifier": true,
+  "require_fk_for_moving_wrist": false,
+  "require_unique_square_evidence": false,
+  "enable_robot_self_filter": false,
+  "calib_epoch": "nov12_tf_static"
+}

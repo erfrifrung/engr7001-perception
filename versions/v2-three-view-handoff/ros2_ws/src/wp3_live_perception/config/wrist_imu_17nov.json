@@ -1,0 +1,11 @@
+{
+  "preset": "wrist_imu_17nov",
+  "profile_name": "wrist_imu_17nov",
+  "frame_id": "jenga_table",
+  "use_roi_precrop": false,
+  "use_side_verifier": false,
+  "require_fk_for_moving_wrist": false,
+  "require_unique_square_evidence": false,
+  "enable_robot_self_filter": false,
+  "calib_epoch": "nov17_plane_mode"
+}

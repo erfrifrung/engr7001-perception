@@ -1,0 +1,55 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.45
+      Cell Size: 0.025
+      Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Table grid
+      Plane Cell Count: 12
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: WP3 markers
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /wp3_live/markers
+      Value: true
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Name: WP3 overlay
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /wp3_live/overlay
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 32; 35; 40
+    Fixed Frame: jenga_table
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 0.55
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Name: Table
+      Pitch: 0.8
+      Yaw: 0.65

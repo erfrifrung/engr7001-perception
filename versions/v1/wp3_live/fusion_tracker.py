@@ -1,0 +1,264 @@
+"""Late view association, MDS track confirmation, 1.8 s occlusion hold, and frozen-stream watchdog."""
+from __future__ import annotations
+
+from dataclasses import dataclass, field, replace
+import hashlib
+import numpy as np
+from scipy.optimize import linear_sum_assignment
+
+from .config import BlockSpec, PolicyThresholds
+from .proposals import BlockFit
+
+
+@dataclass
+class StreamHealth:
+    role: str
+    last_stamp_ns: int = -1
+    last_rx_s: float = -1.0
+    last_frame_sig: str = ""
+    same_sig_since_s: float = -1.0
+    frozen: bool = False
+    stale: bool = False
+    dropped_stale: int = 0
+    dropped_unpaired: int = 0
+
+
+class StreamWatchdog:
+    """Detect missing, stale, future-stamped, and frozen-frame streams separately per camera."""
+
+    def __init__(self, max_age_s: float = 0.35, freeze_timeout_s: float = 1.2) -> None:
+        self.max_age_s = float(max_age_s)
+        self.freeze_timeout_s = float(freeze_timeout_s)
+        self.streams: dict[str, StreamHealth] = {}
+
+    def update(self, role: str, stamp_ns: int, rx_s: float, now_s: float, img_bytes: bytes | memoryview) -> StreamHealth:
+        st = self.streams.setdefault(role, StreamHealth(role=role))
+        age_s = now_s - (stamp_ns * 1e-9)
+        # Lightweight 4 KB sparse checksum detects identical frozen publisher frames in < 0.05 ms
+        mv = memoryview(img_bytes).cast("B")
+        stride = max(1, len(mv) // 1024)
+        sample = bytes(mv[::stride])
+        sig = hashlib.blake2b(sample, digest_size=8).hexdigest()
+
+        if stamp_ns != st.last_stamp_ns or sig != st.last_frame_sig:
+            st.last_stamp_ns = stamp_ns
+            st.last_frame_sig = sig
+            st.same_sig_since_s = now_s
+            st.frozen = False
+        else:
+            if st.same_sig_since_s >= 0 and (now_s - st.same_sig_since_s) >= self.freeze_timeout_s:
+                st.frozen = True
+
+        st.last_rx_s = now_s
+        # Fix node.py:151 bug: allow slight clock skew [-5 ms, max_age_s]
+        st.stale = not (-0.005 <= age_s <= self.max_age_s)
+        if st.stale:
+            st.dropped_stale += 1
+        return st
+
+    def check_timeout(self, role: str, now_s: float) -> StreamHealth:
+        st = self.streams.setdefault(role, StreamHealth(role=role))
+        if st.last_rx_s < 0 or (now_s - st.last_rx_s) > self.max_age_s:
+            st.stale = True
+        return st
+
+
+def symmetry_yaw_diff_rad(a_rad: float, b_rad: float, is_square: bool) -> float:
+    period = np.pi / 2.0 if is_square else np.pi
+    d = abs((a_rad - b_rad + period / 2.0) % period - period / 2.0)
+    return float(d)
+
+
+def associate_late_hypotheses(
+    primary_fits: list[BlockFit],
+    secondary_fits: list[BlockFit],
+    block: BlockSpec,
+    th: PolicyThresholds,
+) -> list[tuple[int, int]]:
+    """1-to-1 Hungarian late hypothesis match requiring >=2x uniqueness margin & symmetry check."""
+    if not primary_fits or not secondary_fits:
+        return []
+    n_p, n_s = len(primary_fits), len(secondary_fits)
+    cost = np.full((n_p, n_s), np.inf, dtype=np.float64)
+    yaw_lim = float(np.radians(th.assoc_gate_yaw_deg))
+    for i, pf in enumerate(primary_fits):
+        for j, sf in enumerate(secondary_fits):
+            dist = float(np.hypot(pf.xy_m[0] - sf.xy_m[0], pf.xy_m[1] - sf.xy_m[1]))
+            dyaw = symmetry_yaw_diff_rad(pf.yaw_rad, sf.yaw_rad, block.is_square)
+            if dist <= th.assoc_gate_xy_m and dyaw <= yaw_lim:
+                cost[i, j] = dist
+
+    # Reject any row/column where 2nd best finite match is not >= uniqueness_margin * best
+    for i in range(n_p):
+        fin = np.sort(cost[i][np.isfinite(cost[i])])
+        if len(fin) >= 2 and fin[1] < th.assoc_uniqueness_margin * max(fin[0], 1e-4):
+            cost[i, :] = np.inf
+    for j in range(n_s):
+        fin = np.sort(cost[:, j][np.isfinite(cost[:, j])])
+        if len(fin) >= 2 and fin[1] < th.assoc_uniqueness_margin * max(fin[0], 1e-4):
+            cost[:, j] = np.inf
+
+    finite = np.isfinite(cost)
+    if not np.any(finite):
+        return []
+    big = (min(n_p, n_s) + 1) * (1.0 + float(cost[finite].max()))
+    rr, cc = linear_sum_assignment(np.where(finite, cost, big))
+    return [(int(r), int(c)) for r, c in zip(rr, cc) if finite[r, c]]
+
+
+@dataclass
+class TrackedBlock:
+    track_id: int
+    block_name: str
+    fit: BlockFit
+    source: str
+    state: str                   # MEASURED | DISPLACED | OCCLUDED | STALE | UNKNOWN
+    mds_score: int               # F38 signed agreement score (+1/-1)
+    confirmed: bool
+    observation_stamp_ns: int    # NEVER refreshed during occlusion/hold!
+    last_seen_s: float
+    anchor_xy_m: tuple[float, float]
+    target_side_fresh: bool
+    snapshot_commit_eligible: bool
+
+
+class WP3TemporalTracker:
+    """Identity-preserving tracker with F38 MDS confirmation, 1.8 s hold, and target-level shift check."""
+
+    def __init__(self, block: BlockSpec, th: PolicyThresholds) -> None:
+        self.block = block
+        self.th = th
+        self._tracks: dict[int, TrackedBlock] = {}
+        self._next_id: int = 1
+        self._last_now_s: float = -np.inf
+
+    def reset(self) -> None:
+        self._tracks.clear()
+        self._next_id = 1
+        self._last_now_s = -np.inf
+
+    def update(
+        self,
+        fits: list[BlockFit],
+        sources: list[str],
+        stamp_ns: int,
+        now_s: float,
+        *,
+        side_fresh_global: bool = False,
+        target_shift_gate_m: float = 0.008,
+    ) -> list[TrackedBlock]:
+        """Update tracks; expiry/retirement NEVER infer OBSERVED_EMPTY."""
+        if not np.isfinite(now_s):
+            raise ValueError("Tracker clock must be finite")
+        if now_s < self._last_now_s:
+            # Handle bag seek backwards cleanly
+            self.reset()
+        self._last_now_s = now_s
+
+        active_ids = [
+            tid for tid, tr in self._tracks.items()
+            if (now_s - tr.last_seen_s) <= self.th.retire_s
+        ]
+        # Drop permanently retired IDs (never reuse ID!)
+        self._tracks = {tid: self._tracks[tid] for tid in active_ids}
+
+        n_t = len(active_ids)
+        n_d = len(fits)
+        matches: dict[int, int] = {}
+        used_det: set[int] = set()
+
+        if n_t > 0 and n_d > 0:
+            cost = np.full((n_t, n_d), np.inf, dtype=np.float64)
+            yaw_lim = float(np.radians(self.th.assoc_gate_yaw_deg))
+            for r, tid in enumerate(active_ids):
+                tr = self._tracks[tid]
+                for c, f in enumerate(fits):
+                    dist = float(np.hypot(f.xy_m[0] - tr.fit.xy_m[0], f.xy_m[1] - tr.fit.xy_m[1]))
+                    dyaw = symmetry_yaw_diff_rad(f.yaw_rad, tr.fit.yaw_rad, self.block.is_square)
+                    if dist <= 0.025 and dyaw <= yaw_lim:
+                        cost[r, c] = dist
+            # Ambiguity margin guard on swaps
+            for r in range(n_t):
+                fin = np.sort(cost[r][np.isfinite(cost[r])])
+                if len(fin) >= 2 and fin[1] - fin[0] <= 0.002:
+                    cost[r, :] = np.inf
+            for c in range(n_d):
+                fin = np.sort(cost[:, c][np.isfinite(cost[:, c])])
+                if len(fin) >= 2 and fin[1] - fin[0] <= 0.002:
+                    cost[:, c] = np.inf
+            finite = np.isfinite(cost)
+            if np.any(finite):
+                big = (min(n_t, n_d) + 1) * (1.0 + float(cost[finite].max()))
+                rr, cc = linear_sum_assignment(np.where(finite, cost, big))
+                for r, c in zip(rr, cc):
+                    if finite[r, c]:
+                        matches[active_ids[r]] = int(c)
+                        used_det.add(int(c))
+
+        # Update matched & occluded tracks (NEVER refresh observation_stamp_ns on miss!)
+        for tid in active_ids:
+            tr = self._tracks[tid]
+            if tid in matches:
+                det_i = matches[tid]
+                new_fit = fits[det_i]
+                new_src = sources[det_i]
+                mds = min(self.th.mds_confirm_frames + 2, tr.mds_score + 1)
+                confirmed = mds >= self.th.mds_confirm_frames
+                shift_m = float(np.hypot(new_fit.xy_m[0] - tr.anchor_xy_m[0], new_fit.xy_m[1] - tr.anchor_xy_m[1]))
+                shifted = shift_m >= target_shift_gate_m
+                state = "DISPLACED" if shifted else "MEASURED"
+                snap_ok = bool(confirmed and (not shifted) and side_fresh_global and (stamp_ns >= tr.observation_stamp_ns))
+                self._tracks[tid] = TrackedBlock(
+                    track_id=tid,
+                    block_name=f"B{tid:02d}",
+                    fit=new_fit,
+                    source=new_src,
+                    state=state,
+                    mds_score=mds,
+                    confirmed=confirmed,
+                    observation_stamp_ns=int(stamp_ns),
+                    last_seen_s=now_s,
+                    anchor_xy_m=tr.anchor_xy_m,
+                    target_side_fresh=side_fresh_global,
+                    snapshot_commit_eligible=snap_ok,
+                )
+            else:
+                miss_age = now_s - tr.last_seen_s
+                mds = max(-1, tr.mds_score - 1)
+                if miss_age <= self.th.occlusion_hold_s:
+                    state = "OCCLUDED"
+                else:
+                    state = "STALE"
+                self._tracks[tid] = replace(
+                    tr,
+                    state=state,
+                    mds_score=mds,
+                    # Critically preserve unmodified tr.observation_stamp_ns!
+                    target_side_fresh=False,
+                    snapshot_commit_eligible=False,
+                )
+
+        # Spawn new tracks for unmatched detections
+        for c, (fit, src) in enumerate(zip(fits, sources)):
+            if c in used_det:
+                continue
+            tid = self._next_id
+            self._next_id += 1
+            mds = 1
+            confirmed = mds >= self.th.mds_confirm_frames
+            self._tracks[tid] = TrackedBlock(
+                track_id=tid,
+                block_name=f"B{tid:02d}",
+                fit=fit,
+                source=src,
+                state="MEASURED",
+                mds_score=mds,
+                confirmed=confirmed,
+                observation_stamp_ns=int(stamp_ns),
+                last_seen_s=now_s,
+                anchor_xy_m=fit.xy_m,
+                target_side_fresh=side_fresh_global,
+                snapshot_commit_eligible=bool(confirmed and side_fresh_global),
+            )
+
+        return [self._tracks[k] for k in sorted(self._tracks)]
