@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ ${1:-} == --help || $# -lt 2 ]]; then
+if [[ ${1:-} == --help || ${1:-} == -h || $# -lt 2 ]]; then
     cat <<'HELP'
-Usage: bash WP3-Live-Implementation-v2/scripts/compare_bag.sh BAG_DB3 --out OUT_DIR [compare_bag.py options...]
+Usage: bash versions/v2-three-view-handoff/scripts/compare_bag.sh BAG_DB3 --out OUT_DIR [compare_bag.py options...]
 
-THE ONE COMMAND to benchmark all WP3 perception policies & historical v2 controls
-on identical scheduled epochs and calibration from one SQLite3 bag.
+Compare WP3 perception policies on the same frames and calibration from a
+SQLite rosbag2 recording.
 HELP
-    [[ ${1:-} == --help ]] && exit 0 || exit 2
+    [[ ${1:-} == --help || ${1:-} == -h ]] && exit 0 || exit 2
 fi
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
