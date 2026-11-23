@@ -3,10 +3,9 @@ set -euo pipefail
 
 if [[ ${1:-} == --help || ${1:-} == -h ]]; then
     cat <<'HELP'
-Usage: bash WP3-Live-Implementation-v2/scripts/launch_live.sh [options]
+Usage: bash versions/v2/scripts/launch_live.sh [options]
 
-THE ONE COMMAND to launch the chosen live WP3 display-only perception method.
-Requires existing camera publishers (does NOT start or stop cameras or MoveIt).
+Launch the live WP3 perception display. Start your camera publishers first.
 
 Options:
   --policy NAME     Policy (default: merged_corroborated; also whole_partition_mv, merged_wrist_rgb, depth_only, astra_permissive, generic_watershed)

@@ -390,7 +390,7 @@ def _score_v2_record(t_rel_s: float, inst, amb, lab, grid, labels, sym_deg: floa
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description="Shared matched comparison of WP3 perception policies on one ROS 2 SQLite bag.")
     ap.add_argument("bag", help="Path to .db3 file or bag folder")
-    ap.add_argument("--out", required=True, help="Output folder inside WP3-Live-Implementation/results/...")
+    ap.add_argument("--out", required=True, help="Directory for the decision table, reports, predictions and overlays")
     ap.add_argument("--config", default=str(IMPL_ROOT / "ros2_ws/src/wp3_live_perception/config/printed_jenga_live.json"))
     ap.add_argument("--frame", choices=("tf", "board", "plane"), default="tf")
     ap.add_argument("--tf-json", default="", help="Optional recalibration JSON supplying diagnostics.{wrist,tripod}.board_from_optical")
