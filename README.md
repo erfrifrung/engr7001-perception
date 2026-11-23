@@ -1,6 +1,6 @@
 # ENGR7001 robotic perception
 
-Shadi Hamadamin’s Work Package 3 (WP3) archive for Lancaster University’s ENGR7001 Project 7. It tracks the development of tabletop block pose estimation, segmentation and multi-object tracking for an intent-aware shared-manipulation project. The ROS 2 perception nodes publish observations and RViz displays.
+It tracks the development of tabletop block pose estimation, segmentation and multi-object tracking for an intent-aware shared-manipulation project. The ROS 2 perception nodes publish observations and RViz displays.
 
 | Snapshot | Main change |
 |---|---|
