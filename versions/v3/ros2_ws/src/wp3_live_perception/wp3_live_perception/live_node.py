@@ -65,6 +65,18 @@ def _stamp_ns(stamp) -> int:
     return int(stamp.sec) * 1_000_000_000 + int(stamp.nanosec)
 
 
+def _package_code_hash() -> str:
+    """Hash this node plus every wp3_live module, so V2/V3/V3.1 runs are distinguishable in logs."""
+    import wp3_live
+
+    h = hashlib.sha256()
+    files = [Path(__file__).resolve()] + sorted(Path(wp3_live.__file__).resolve().parent.glob("*.py"))
+    for p in files:
+        h.update(p.name.encode())
+        h.update(p.read_bytes())
+    return h.hexdigest()[:12]
+
+
 class WP3LivePerceptionNode(Node):
     """Display-only perception node with bounded RGB/depth pairing buffers."""
 
@@ -85,7 +97,17 @@ class WP3LivePerceptionNode(Node):
         self.declare_parameter("rate_hz", 15.0)
         self.declare_parameter("enable_gpu_mask_worker", False)
         self.declare_parameter("sam2_weights_path", "")
-        self.declare_parameter("enable_temporal_skip", True)
+        # V3.1: frame skipping re-publishes cached geometry, so it is opt-in.
+        self.declare_parameter("enable_temporal_skip", False)
+        # V3.1: the live default is the V2 path. The ROS parameter wins over the JSON profile for this switch.
+        self.declare_parameter("enable_v3_regions", False)
+        # Empty / negative = keep the JSON profile (or dataclass default) value.
+        self.declare_parameter("v3_solver", "")
+        self.declare_parameter("v3_frame_budget_ms", -1.0)
+        self.declare_parameter("persistent_joint_occlusion", True)
+        self.declare_parameter("reanchor_after", 2)
+        # Robot TF must be within this of the camera frame stamp to be used (never unbounded "latest").
+        self.declare_parameter("robot_tf_max_age_s", 0.050)
 
         cfg_path = str(self.get_parameter("config").value)
         self.policy = str(self.get_parameter("policy").value)
@@ -105,11 +127,24 @@ class WP3LivePerceptionNode(Node):
         sam2_weights = str(self.get_parameter("sam2_weights_path").value)
         use_temporal_skip = bool(self.get_parameter("enable_temporal_skip").value)
 
-        self.cfg = load_runtime_config(
-            cfg_path,
-            overrides={"use_side_verifier": use_ver, "enable_temporal_skip": use_temporal_skip},
-        )
-        self.code_hash = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()[:12]
+        overrides: dict[str, Any] = {
+            "use_side_verifier": use_ver,
+            "enable_temporal_skip": use_temporal_skip,
+            "enable_v3_regions": bool(self.get_parameter("enable_v3_regions").value),
+            "persistent_joint_occlusion": bool(self.get_parameter("persistent_joint_occlusion").value),
+            "reanchor_after": int(self.get_parameter("reanchor_after").value),
+        }
+        v3_solver = str(self.get_parameter("v3_solver").value).strip()
+        if v3_solver:
+            if v3_solver not in ("prove", "enumerate"):
+                raise ValueError(f"v3_solver must be 'prove' or 'enumerate', got {v3_solver!r}")
+            overrides["v3_solver"] = v3_solver
+        v3_budget = float(self.get_parameter("v3_frame_budget_ms").value)
+        if v3_budget > 0.0:
+            overrides["v3_frame_budget_ms"] = v3_budget
+        self.robot_tf_max_age_s = max(0.0, float(self.get_parameter("robot_tf_max_age_s").value))
+        self.cfg = load_runtime_config(cfg_path, overrides=overrides)
+        self.code_hash = _package_code_hash()
         if use_gpu_worker:
             ch = SAM2MaskChallenger(sam2_weights or None)
             if ch.available:
@@ -130,7 +165,18 @@ class WP3LivePerceptionNode(Node):
             max_age_s=self.cfg.thresholds.max_age_s,
             freeze_timeout_s=self.cfg.thresholds.freeze_timeout_s,
         )
-        self.tracker = WP3TemporalTracker(self.cfg.block, self.cfg.thresholds)
+        self.tracker = WP3TemporalTracker(
+            self.cfg.block,
+            self.cfg.thresholds,
+            persistent_joint_occlusion=self.cfg.persistent_joint_occlusion,
+            reanchor_after=self.cfg.reanchor_after,
+        )
+        self.get_logger().info(
+            f"config: enable_v3_regions={self.cfg.enable_v3_regions} v3_solver={self.cfg.v3_solver} "
+            f"v3_frame_budget_ms={self.cfg.v3_frame_budget_ms} persistent_joint_occlusion={self.cfg.persistent_joint_occlusion} "
+            f"reanchor_after={self.cfg.reanchor_after} enable_temporal_skip={self.cfg.enable_temporal_skip} "
+            f"require_fk_for_moving_wrist={self.cfg.require_fk_for_moving_wrist} code_hash={self.code_hash}"
+        )
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
@@ -228,12 +274,43 @@ class WP3LivePerceptionNode(Node):
         except Exception:
             return None
 
-    def _lookup_robot_links(self, frame_id: str, now_s: float, *, stationary: bool = False) -> dict:
+    def _lookup_tf_stamped(self, target: str, source: str, q_time: Time, timeout_s: float):
+        """(4x4, header stamp ns) or (None, None). Never raises."""
+        try:
+            ts = self.tf_buffer.lookup_transform(target, source, q_time, timeout=Duration(seconds=timeout_s))
+        except Exception:
+            return None, None
+        tr = ts.transform
+        T = np.eye(4, dtype=np.float64)
+        T[:3, :3] = Rotation.from_quat([tr.rotation.x, tr.rotation.y, tr.rotation.z, tr.rotation.w]).as_matrix()
+        T[:3, 3] = [tr.translation.x, tr.translation.y, tr.translation.z]
+        return T, _stamp_ns(ts.header.stamp)
+
+    def _lookup_robot_links(self, frame_id: str, now_s: float, frame_stamp_ns: int | None, *,
+                            stationary: bool = False) -> dict:
+        """Robot link poses at the camera exposure time.
+
+        The arm is looked up at ``frame_stamp_ns`` (short wait for /tf to catch up). If that extrapolates, the
+        latest TF is used only when its own stamp is within ``robot_tf_max_age_s`` of the frame. Otherwise no
+        links are returned, so the V3 stage treats upper layers as unqualified rather than using a stale arm pose.
+        """
         if stationary and self._cached_robot_links is not None and (now_s - self._cached_robot_links[0]) <= 0.5:
             return self._cached_robot_links[1]
-        out = {}
+        out: dict = {}
+        q_time = Time(nanoseconds=int(frame_stamp_ns)) if frame_stamp_ns else Time()
+        T6, st6 = self._lookup_tf_stamped(frame_id, "link6", q_time, 0.015 if frame_stamp_ns else 0.0)
+        if T6 is None and frame_stamp_ns:
+            T6, st6 = self._lookup_tf_stamped(frame_id, "link6", Time(), 0.0)
+            if T6 is None or st6 is None or abs(st6 - int(frame_stamp_ns)) * 1e-9 > self.robot_tf_max_age_s:
+                T6 = None
+            else:
+                q_time = Time(nanoseconds=int(st6))
+        if T6 is None:
+            if not stationary:
+                self._cached_robot_links = None
+            return out
         for link in ROBOT_LINKS:
-            T = self._lookup_mat(frame_id, link, None, static=False, timeout_s=0.0)
+            T, _ = (T6, st6) if link == "link6" else self._lookup_tf_stamped(frame_id, link, q_time, 0.0)
             if T is not None:
                 q = Rotation.from_matrix(T[:3, :3]).as_quat().tolist()
                 out[link] = (T[:3, 3].tolist(), q)
@@ -293,10 +370,9 @@ class WP3LivePerceptionNode(Node):
             return None, {"status": "missing_table_tf", "tf_valid": False}
         rgb_np = self.bridge.imgmsg_to_cv2(msg_rgb, desired_encoding="rgb8")
         dep_np = self.bridge.imgmsg_to_cv2(msg_dep, desired_encoding="passthrough")
-        if role == "third" and (
-            rgb_np.shape[:2] != (cam.height, cam.width) or dep_np.shape != rgb_np.shape[:2]
-        ):
-            return None, {"status": "camera_info_shape_mismatch", "tf_valid": True}
+        if rgb_np.shape[:2] != (cam.height, cam.width) or dep_np.shape[:2] != rgb_np.shape[:2]:
+            # Wrong profile or unaligned depth would silently mis-project every pixel: refuse the view.
+            return None, {"status": "camera_info_shape_mismatch", "tf_valid": T_tc is not None}
         vi = ViewInput(
             role="tripod" if role == "side" else role,
             cam=cam,
@@ -307,7 +383,9 @@ class WP3LivePerceptionNode(Node):
             rx_ns=rx_rgb_ns,
             is_fresh=not health.stale,
             is_frozen=health.frozen,
-            pose_frame_mode="table" if T_tc is not None else "plane",
+            # V3.1: never fall back to a camera-local plane frame live. Without T_table_cam the epoch reports
+            # status "uncalibrated" and publishes no poses under frame_id "jenga_table".
+            pose_frame_mode="table",
         )
         return vi, {
             "status": "frozen" if health.frozen else ("stale" if health.stale else "ok"),
@@ -356,10 +434,12 @@ class WP3LivePerceptionNode(Node):
             if m_res is not None:
                 ext_masks = m_res.masks_u8
 
+        frame_stamp_ns = wrist_vi.stamp_ns if wrist_vi is not None else (side_vi.stamp_ns if side_vi is not None else None)
         robot_links = (
             self._lookup_robot_links(
                 self.cfg.frame_id,
                 now_s,
+                frame_stamp_ns,
                 stationary=bool(dwell is not None and dwell.stationary),
             )
             if self.cfg.enable_robot_self_filter
@@ -395,18 +475,25 @@ class WP3LivePerceptionNode(Node):
         if self.third_ns:
             cam_health["third"]["cut_status"] = epoch.evidence_log.get("third_cut_status", "unavailable")
             cam_health["third"]["cut_verdicts"] = epoch.evidence_log.get("third_cut_verdicts", {})
+        # V3.1: stamp publication after compute, so publish - observation shows the real processing delay
+        # (tick start is kept separately as tick_start_ns in the health message).
+        publish_ns = self.get_clock().now().nanoseconds
         payload = build_atomic_scene_payload(
             epoch,
             tracks,
             self.cfg,
             epoch_id=self._epoch_id,
-            publish_stamp_ns=now_ns,
+            publish_stamp_ns=publish_ns,
             code_hash=self.code_hash,
             camera_health=cam_health,
         )
         self.pub_scene.publish(String(data=json.dumps(payload)))
         self.pub_health.publish(String(data=json.dumps({
             "epoch_id": self._epoch_id,
+            "tick_start_ns": now_ns,
+            "publish_stamp_ns": publish_ns,
+            "status": epoch.status,
+            "dwell_reason": epoch.dwell.reason if epoch.dwell else None,
             "fallback_mode": epoch.fallback_mode,
             "camera_health": cam_health,
             "stage_timings_ms": epoch.stage_timings_ms,

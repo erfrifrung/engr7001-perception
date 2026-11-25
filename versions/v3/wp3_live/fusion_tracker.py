@@ -123,6 +123,7 @@ class TrackedBlock:
     identity_ambiguous: bool = False
     ambiguous_peer_ids: tuple[int, ...] = ()
     stable_count: int = 0                # V3: consecutive fresh, unambiguous, consistent observations
+    stable_ref_xy_m: tuple[float, float] | None = None  # V3.1: pose where the current stable run started
 
 
 class WP3TemporalTracker:
@@ -174,6 +175,12 @@ class WP3TemporalTracker:
         ]
         # Drop permanently retired IDs (never reuse ID!)
         self._tracks = {tid: self._tracks[tid] for tid in active_ids}
+        # V3.1: drop bookkeeping keyed by retired tracks. References *to* a retired peer are kept on purpose: a
+        # block co-hidden with a block that never came back may still be that block, so it stays unverified.
+        live = set(active_ids)
+        for book in (self._co_hidden, self._unverified):
+            for tid in [t for t in book if t not in live]:
+                del book[tid]
 
         n_t = len(active_ids)
         n_d = len(fits)
@@ -184,12 +191,17 @@ class WP3TemporalTracker:
         if n_t > 0 and n_d > 0:
             cost = np.full((n_t, n_d), np.inf, dtype=np.float64)
             yaw_lim = float(np.radians(self.th.assoc_gate_yaw_deg))
+            # V3.1: a block one or more layers away is a different block, even at the same (x, y, yaw)
+            # (e.g. the block revealed below a lifted one). Gate on top height when both are finite.
+            z_lim = 0.6 * float(self.block.height_m)
             for r, tid in enumerate(active_ids):
                 tr = self._tracks[tid]
                 for c, f in enumerate(fits):
                     dist = float(np.hypot(f.xy_m[0] - tr.fit.xy_m[0], f.xy_m[1] - tr.fit.xy_m[1]))
                     dyaw = symmetry_yaw_diff_rad(f.yaw_rad, tr.fit.yaw_rad, self.block.is_square)
-                    if dist <= 0.025 and dyaw <= yaw_lim:
+                    dz = abs(float(f.z_top_m) - float(tr.fit.z_top_m))
+                    z_ok = (not np.isfinite(dz)) or dz <= z_lim
+                    if dist <= 0.025 and dyaw <= yaw_lim and z_ok:
                         cost[r, c] = dist
             # Detect near-ties after occlusion or between adjacent tracks before pruning hard swaps
             near_rows: set[int] = set()
@@ -260,11 +272,16 @@ class WP3TemporalTracker:
                 id_ambig = bool(peers_tup)
                 anchor = tr.anchor_xy_m
                 stable_count = 0
+                stable_ref = None
                 if self.reanchor_after > 0:
-                    consistent = float(np.hypot(new_fit.xy_m[0] - tr.fit.xy_m[0], new_fit.xy_m[1] - tr.fit.xy_m[1])) <= 0.002
+                    # V3.1: measure consistency from where the stable run started, not frame to frame, so a block
+                    # sliding steadily at < 2 mm/frame cannot re-anchor (and become commit-eligible) mid-motion.
+                    ref = tr.stable_ref_xy_m if (tr.stable_count > 0 and tr.stable_ref_xy_m is not None) else tr.fit.xy_m
+                    consistent = float(np.hypot(new_fit.xy_m[0] - ref[0], new_fit.xy_m[1] - ref[1])) <= 0.002
                     stable_count = (tr.stable_count + 1) if (consistent and not id_ambig and tr.state in ("MEASURED", "DISPLACED")) else 0
+                    stable_ref = ref if stable_count > 0 else None
                     if shifted and stable_count >= self.reanchor_after:
-                        anchor, shifted, stable_count = new_fit.xy_m, False, 0
+                        anchor, shifted, stable_count, stable_ref = new_fit.xy_m, False, 0, None
                 t_side = bool(pose_side_visible[det_i]) if pose_side_visible is not None else bool(side_fresh_global)
                 state = "DISPLACED" if shifted else "MEASURED"
                 snap_ok = bool(
@@ -286,6 +303,7 @@ class WP3TemporalTracker:
                     identity_ambiguous=id_ambig,
                     ambiguous_peer_ids=peers_tup,
                     stable_count=stable_count,
+                    stable_ref_xy_m=stable_ref,
                 )
             else:
                 miss_age = now_s - tr.last_seen_s

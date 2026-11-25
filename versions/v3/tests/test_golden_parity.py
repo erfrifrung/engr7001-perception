@@ -38,6 +38,12 @@ def load_runtime_config(path, *a, _orig=load_runtime_config, **k):  # noqa: F811
     return cfg
 
 GOLDEN_PATH = Path(__file__).resolve().parent / "golden_baseline_v2.json"
+# V3.1: the V3 front end deliberately ranks minAreaRect edge directions ahead of PCA
+# (PolicyThresholds.edge_first_directions) to remove V2's 3 mm stagger dead zone. On the 12 Nov wooden-prop bag
+# that changes whole_partition_mv yaw by 0.54 deg (ep0) and up to 8.2 deg (ep5) relative to V2's output. The
+# golden is V2 output, not ground truth, so neither order is shown to be more accurate here.
+GOLDEN_V31_BAG_PATH = Path(__file__).resolve().parent / "golden_bag_12nov_v31_frontend.json"
+REQUIRE_BAG = os.environ.get("WP3_REQUIRE_GOLDEN_BAG", "").strip() in ("1", "true", "yes")
 _DEFAULT_BAG = Path.home() / "wp3-lab-staging/three_cam_demo_bag/three_cam_demo_bag_0.db3"
 
 
@@ -99,7 +105,8 @@ def _serialize_epoch(res) -> dict[str, Any]:
     }
 
 
-def _assert_epoch_matches(actual: dict[str, Any], expected: dict[str, Any], *, sym_deg: float, ctx: str) -> None:
+def _assert_epoch_matches(actual: dict[str, Any], expected: dict[str, Any], *, sym_deg: float, ctx: str,
+                          yaw_tol_deg: float = 0.5) -> None:
     assert actual["status"] == expected["status"], f"{ctx}: status {actual['status']} != {expected['status']}"
     assert actual["fallback_mode"] == expected["fallback_mode"], f"{ctx}: fallback {actual['fallback_mode']} != {expected['fallback_mode']}"
     assert actual["n_out"] == expected["n_out"], f"{ctx}: n_out {actual['n_out']} != {expected['n_out']}"
@@ -126,7 +133,7 @@ def _assert_epoch_matches(actual: dict[str, Any], expected: dict[str, Any], *, s
             y_err_deg = sym_yaw_err_deg(p_act[r]["yaw_deg_mod"], p_exp[c]["yaw_deg_mod"], sym_deg)
             assert xy_err_m <= 0.0005, f"{ctx}: pose XY drift {xy_err_m * 1000.0:.3f} mm > 0.5 mm"
             assert z_err_m <= 0.0005, f"{ctx}: pose Z drift {z_err_m * 1000.0:.3f} mm > 0.5 mm"
-            assert y_err_deg <= 0.5, f"{ctx}: pose yaw drift {y_err_deg:.3f} deg > 0.5 deg"
+            assert y_err_deg <= yaw_tol_deg, f"{ctx}: pose yaw drift {y_err_deg:.3f} deg > {yaw_tol_deg} deg"
 
 
 def _run_synthetic_golden() -> dict[str, dict[str, Any]]:
@@ -169,8 +176,11 @@ def _pair_side(wrist_pairs: list[dict], side_pairs: list[dict], max_skew_s: floa
     return out
 
 
-def _run_bag_golden(max_frames: int = 20) -> dict[str, list[dict[str, Any]]]:
+def _run_bag_golden(max_frames: int = 20, *, v2_direction_order: bool = False) -> dict[str, list[dict[str, Any]]]:
     cfg = load_runtime_config(BAG_CFG_PATH)
+    if v2_direction_order:
+        from dataclasses import replace as _replace
+        cfg.thresholds = _replace(cfg.thresholds, edge_first_directions=False)
     bag = load_bag_fast(BAG_BASELINE_PATH, [("wrist", cfg.wrist.namespace), ("side", cfg.side.namespace)], use_aligned_depth=True)
     cc = CameraModelCache()
     iw = bag.cameras["wrist"].info
@@ -204,6 +214,27 @@ def capture_golden() -> None:
     print(f"Wrote golden baseline to {GOLDEN_PATH} (bag_epochs={len(payload['bag_12nov_baseline_20'].get('whole_partition_mv', []))})")
 
 
+def capture_v31_bag_golden() -> None:
+    """Capture the V3 front-end bag golden (V3 region stage off, as in every test in this file)."""
+    if not BAG_BASELINE_PATH.is_file():
+        raise SystemExit(f"bag not found: {BAG_BASELINE_PATH}")
+    payload = {
+        "note": "V3.1 front end (minAreaRect-first directions); V3 region stage off. Captured by "
+                "`python3 tests/test_golden_parity.py --capture-v31-bag`.",
+        "bag_12nov_baseline_20": _run_bag_golden(20),
+    }
+    GOLDEN_V31_BAG_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(f"Wrote {GOLDEN_V31_BAG_PATH}")
+
+
+def _require_bag() -> None:
+    if not BAG_BASELINE_PATH.is_file():
+        if REQUIRE_BAG:
+            pytest.fail(f"WP3_REQUIRE_GOLDEN_BAG is set but the 12 Nov bag is missing: {BAG_BASELINE_PATH}")
+        pytest.skip(f"12 Nov baseline bag not present ({BAG_BASELINE_PATH}); set WP3_GOLDEN_BAG_PATH, "
+                    "or WP3_REQUIRE_GOLDEN_BAG=1 to make this a failure")
+
+
 def test_golden_synthetic_printed_jenga_parity() -> None:
     assert GOLDEN_PATH.is_file(), f"Missing {GOLDEN_PATH}"
     golden = json.loads(GOLDEN_PATH.read_text(encoding="utf-8"))["synthetic"]
@@ -215,18 +246,33 @@ def test_golden_synthetic_printed_jenga_parity() -> None:
 
 
 def test_golden_bag_12nov_baseline_parity() -> None:
-    if not BAG_BASELINE_PATH.is_file():
-        pytest.skip("12 Nov baseline bag not present on disk")
-    assert GOLDEN_PATH.is_file(), f"Missing {GOLDEN_PATH}"
-    golden = json.loads(GOLDEN_PATH.read_text(encoding="utf-8")).get("bag_12nov_baseline_20", {})
-    assert golden, "Empty bag_12nov_baseline_20 in golden baseline JSON"
+    """Exact regression gate against this front end's own golden (falls back to the V2 golden if not captured)."""
+    _require_bag()
+    path = GOLDEN_V31_BAG_PATH if GOLDEN_V31_BAG_PATH.is_file() else GOLDEN_PATH
+    golden = json.loads(path.read_text(encoding="utf-8")).get("bag_12nov_baseline_20", {})
+    assert golden, f"Empty bag_12nov_baseline_20 in {path.name}"
     actual = _run_bag_golden(len(golden[BAG_POLICIES[0]]))
     for pol, exp_list in golden.items():
         assert len(actual[pol]) == len(exp_list)
         for idx, exp_ep in enumerate(exp_list):
-            _assert_epoch_matches(actual[pol][idx], exp_ep, sym_deg=90.0, ctx=f"bag:{pol}:ep{idx}")
+            _assert_epoch_matches(actual[pol][idx], exp_ep, sym_deg=90.0, ctx=f"bag[{path.name}]:{pol}:ep{idx}")
+
+
+def test_golden_bag_12nov_v2_direction_order_reproduces_v2() -> None:
+    """With edge_first_directions=False the front end reproduces V2's recorded output exactly, so the
+    direction order is the only behavioural change on this bag."""
+    _require_bag()
+    golden = json.loads(GOLDEN_PATH.read_text(encoding="utf-8")).get("bag_12nov_baseline_20", {})
+    assert golden, "Empty bag_12nov_baseline_20 in golden_baseline_v2.json"
+    actual = _run_bag_golden(len(golden[BAG_POLICIES[0]]), v2_direction_order=True)
+    for pol, exp_list in golden.items():
+        assert len(actual[pol]) == len(exp_list)
+        for idx, exp_ep in enumerate(exp_list):
+            _assert_epoch_matches(actual[pol][idx], exp_ep, sym_deg=90.0, ctx=f"bag[v2-order]:{pol}:ep{idx}")
 
 
 if __name__ == "__main__":
     if "--capture" in sys.argv:
         capture_golden()
+    if "--capture-v31-bag" in sys.argv:
+        capture_v31_bag_golden()

@@ -17,7 +17,22 @@ import types
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
-FIX = ROOT.parent / "twin_fixture"   # twin (MoveIt) code stays OUTSIDE the perception tree: zero-MoveIt audit
+
+
+def _twin_dir() -> Path:
+    """Twin (MoveIt) code stays OUTSIDE the perception tree for the zero-MoveIt audit.
+
+    Order: $WP3_TWIN_DIR, a sibling ``twin_fixture`` (original V3 bundle), the portfolio's ``integration/``.
+    """
+    import os
+    env = os.environ.get("WP3_TWIN_DIR", "").strip()
+    for cand in ([Path(env)] if env else []) + [ROOT.parent / "twin_fixture", ROOT.parents[1] / "integration"]:
+        if (cand / "wp3_scene_bridge.py").is_file():
+            return cand
+    return ROOT.parents[1] / "integration"
+
+
+FIX = _twin_dir()
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "bench")); sys.path.insert(0, str(FIX))
 
 import wp3_link  # noqa: E402  (twin code, ROS-free)
@@ -60,6 +75,8 @@ def _v3_payloads():
     from sequences import seq_defs
     pair = seq_defs()["stationary_seamed_pair"][0][0]      # same geometry as the replay benchmark
     cfg = preset_config("printed_jenga")
+    cfg.enable_v3_regions = True                       # V3.1: opt in explicitly (library default is the V2 path)
+    cfg.v3_frame_budget_ms = cfg.v3_region_budget_ms = 1e9   # deterministic node cap only
     tr = WP3TemporalTracker(cfg.block, cfg.thresholds, persistent_joint_occlusion=True, reanchor_after=2)
     rng = np.random.default_rng(2)
     out = []
@@ -115,6 +132,52 @@ def test_twin_bridge_places_v3_blocks_and_parses_recorded_v2():
         assert abs(max(dims[:2]) - 0.075) < 1e-6 and abs(min(dims[:2]) - 0.025) < 1e-6
     acts = b.tracker.actions(time.monotonic())
     assert {a[1] for a in acts if a[0] in ("add", "move")} >= set(published)
+
+
+def _msg(base, tracks, status="ok"):
+    return types.SimpleNamespace(data=json.dumps(dict(base, tracks=tracks, status=status)))
+
+
+def test_bridge_removes_retired_tracks_and_ignores_bad_status():
+    """V3.1: a track missing from the atomic snapshot is retired -> its collision object goes; a non-ok epoch
+    (e.g. 'uncalibrated') changes nothing (it is not evidence that blocks left)."""
+    base = _v3_payloads()[-1]                      # built once: the steps below must run inside stale_s
+    t0 = dict(base["tracks"][0], track_id=11)
+    t1 = dict(base["tracks"][0], track_id=12, pose_table_m=[0.05, 0.05, t0["pose_table_m"][2]])
+    m_both, m_bad, m_one = _msg(base, [t0, t1]), _msg(base, [], status="uncalibrated"), _msg(base, [t0])
+    b = _bridge(commit_eligible_only=False)
+    b.on_scene_json(m_both)
+    first = b.tracker.actions(time.monotonic())
+    assert {a[1] for a in first if a[0] == "add"} == {"wp3_blocks_11", "wp3_blocks_12"}
+    b.on_scene_json(m_bad)
+    assert b.tracker.actions(time.monotonic()) == []
+    assert any("uncalibrated" in w for w in b.warns)
+    b.on_scene_json(m_one)                         # 12 retired upstream
+    assert ("remove", "wp3_blocks_12") in b.tracker.actions(time.monotonic())
+
+
+def test_bridge_keeps_identity_ambiguous_blocks_as_obstacles_by_default():
+    base = _v3_payloads()[-1]
+    amb = dict(base["tracks"][0], track_id=21, identity_ambiguous=True, snapshot_commit_eligible=False, state="MEASURED")
+    b = _bridge(commit_eligible_only=False)
+    b.on_scene_json(_msg(base, [amb]))
+    assert "wp3_blocks_21" in b.tracker.latest
+
+
+def test_block_tracker_attached_and_rejected_updates_are_not_lost():
+    tr = wp3_link.BlockTracker()
+    q = (0.0, 0.0, 0.0, 1.0)
+    tr.observe("a", (0.075, 0.025, 0.015), (0.0, 0.0, 0.0), q, 0.0)
+    tr.observe("b", (0.075, 0.025, 0.015), (0.1, 0.0, 0.0), q, 0.0)
+    assert {k for _, k, *_ in tr.actions(0.1)} == {"a", "b"}
+    tr.retain_only({"a"})                     # b retired while it is in the gripper
+    assert tr.actions(0.2, skip={"b"}) == []  # nothing applied for an attached object ...
+    assert ("remove", "b") in tr.actions(0.3)  # ... and the removal is still pending after release
+    tr.observe("a", (0.075, 0.025, 0.015), (0.0, 0.02, 0.0), q, 0.4)
+    snap = tr.snapshot()
+    assert tr.actions(0.5)[0][0] == "move"
+    tr.restore(snap)                          # MoveIt rejected the diff
+    assert tr.actions(0.6)[0][0] == "move"     # retried, not lost
 
 
 def test_bridge_skips_held_and_ineligible_tracks():

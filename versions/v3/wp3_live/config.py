@@ -106,6 +106,10 @@ class PolicyThresholds:
     recessed_slot_min_m: float = 0.008
     slot_clear_tol_m: float = 0.006
     max_depth_interp_jump_m: float = 0.04
+    # V3: rank minAreaRect edge directions ahead of PCA axes in partition-hypothesis generation (fixes V2's 3 mm
+    # end-stagger dead zone on synthetic scenes). False = exact V2 order. On the 12 Nov wooden-prop bag the two
+    # orders differ by up to 8.2 deg yaw on one epoch (square props, no ground truth): settle on printed-block GT.
+    edge_first_directions: bool = True
 
 
 @dataclass
@@ -155,8 +159,13 @@ class RuntimeConfig:
     # Carve one fully visible block from an oversized component whose remainder is truncated by an
     # adjacent occluder (taller/no-depth cells). Remainder is published as an ambiguous cluster.
     enable_occlusion_truncated_partition: bool = True
+    # V3 tracker (results/V3_RESEARCH.md D4): identities of blocks hidden together stay unverified; DISPLACED
+    # tracks re-anchor after N consistent fresh observations. Passed to WP3TemporalTracker by the live node and replay.
+    persistent_joint_occlusion: bool = True
+    reanchor_after: int = 2
     # V3 region stage (results/V3_RESEARCH.md D1-D3). Off -> exact tuned-V2 behaviour.
-    enable_v3_regions: bool = True
+    # V3.1: OFF by default. Live M1 runs the V2 path; enable explicitly (JSON key or ROS parameter) to evaluate V3.
+    enable_v3_regions: bool = False
     v3_solver: str = "prove"               # "prove" (counterexample search) | "enumerate" (exact-cover enumeration)
     v3_view_carving: bool = True           # signed-depth see-through carving of UNKNOWN cells (wrist/side/third)
     v3_publish_unexplained: bool = True    # unexplained occupancy becomes an ambiguity cluster instead of vanishing
@@ -245,6 +254,16 @@ def _merge_dataclass(instance: Any, patch: dict[str, Any]) -> Any:
     return type(instance)(**kwargs)
 
 
+# V3 / V3.1 switches a flat lab JSON may set (previously ignored by the loader, so JSON could not turn V3 off).
+_V3_JSON_KEYS = (
+    "mask_grouping", "mask_suppress_merged", "top_band_from_upper_cells", "enable_occlusion_truncated_partition",
+    "persistent_joint_occlusion", "reanchor_after",
+    "enable_v3_regions", "v3_solver", "v3_view_carving", "v3_publish_unexplained", "v3_robot_unknown",
+    "v3_region_budget_ms", "v3_frame_budget_ms", "v3_max_nodes", "v3_region_cache", "v3_slab_guard",
+    "v3_mask_seam_cue", "v3_fast_deproject",
+)
+
+
 def load_runtime_config(path: str | Path | None, overrides: dict[str, Any] | None = None) -> RuntimeConfig:
     """Load RuntimeConfig from JSON file (supports flat lab JSON or structured RuntimeConfig)."""
     if path is None or str(path).strip() == "":
@@ -260,6 +279,7 @@ def load_runtime_config(path: str | Path | None, overrides: dict[str, Any] | Non
             "plane_tolerance_m", "min_plane_support", "calib_epoch",
             "enable_temporal_skip", "temporal_skip_max_frames", "temporal_skip_depth_tol_m",
             "enable_partition_warm_start", "enable_parallel_views",
+            *_V3_JSON_KEYS,
         ):
             if key in raw:
                 setattr(cfg, key, raw[key])

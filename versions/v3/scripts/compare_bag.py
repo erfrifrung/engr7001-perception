@@ -404,6 +404,10 @@ def main(argv=None) -> None:
     ap.add_argument("--max-frames", type=int, default=0)
     ap.add_argument("--warmup-frames", type=int, default=5, help="Initial OK frames excluded from timing p50/p95/p99 percentiles")
     ap.add_argument("--temporal-skip", choices=("off", "on"), default="off", help="Enable stationary-frame ROI skip during main sweep")
+    ap.add_argument("--v3", choices=("config", "off", "on"), default="config",
+                    help="V3 region stage: keep the config value, force off (tuned V2) or force on")
+    ap.add_argument("--v3-solver", choices=("prove", "enumerate"), default=None)
+    ap.add_argument("--v3-frame-budget-ms", type=float, default=None)
     args = ap.parse_args(argv)
 
     out_dir = Path(args.out)
@@ -412,6 +416,15 @@ def main(argv=None) -> None:
     ov_dir = out_dir / "overlays"; ov_dir.mkdir(exist_ok=True)
 
     cfg = load_runtime_config(args.config)
+    if args.v3 != "config":
+        cfg.enable_v3_regions = args.v3 == "on"
+    if args.v3_solver:
+        cfg.v3_solver = args.v3_solver
+    if args.v3_frame_budget_ms is not None:
+        cfg.v3_frame_budget_ms = float(args.v3_frame_budget_ms)
+    print(f"[compare_bag] enable_v3_regions={cfg.enable_v3_regions} v3_solver={cfg.v3_solver} "
+          f"v3_frame_budget_ms={cfg.v3_frame_budget_ms} persistent_joint_occlusion={cfg.persistent_joint_occlusion} "
+          f"reanchor_after={cfg.reanchor_after}")
     bag = load_bag_fast(
         args.bag,
         [("wrist", cfg.wrist.namespace), ("side", cfg.side.namespace), ("third", cfg.third.namespace)],
@@ -544,7 +557,9 @@ def main(argv=None) -> None:
     run_cfg = replace(cfg, enable_temporal_skip=(args.temporal_skip == "on"))
 
     def _run_sweep_variant(run_key: str, vmode: str, pol: str, use_cfg, synth_dwell_if_missing: bool = False) -> None:
-        tracker = WP3TemporalTracker(use_cfg.block, use_cfg.thresholds)
+        tracker = WP3TemporalTracker(use_cfg.block, use_cfg.thresholds,
+                                     persistent_joint_occlusion=use_cfg.persistent_joint_occlusion,
+                                     reanchor_after=use_cfg.reanchor_after)
         tcache = EpochTemporalCache()
         dwell_fallback = WristDwellGate(require_fk=False) if synth_dwell_if_missing else None
         recs: list[dict[str, Any]] = []

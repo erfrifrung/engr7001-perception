@@ -719,7 +719,10 @@ def enumerate_partition_hypotheses(
     box = cv2.boxPoints(rect)
     # Edge-aligned minAreaRect directions take precedence in the 5 deg de-duplication below: a small end
     # stagger tilts the PCA axis by ~4 deg, which previously evicted the exact edge direction (3 mm dead zone).
-    raw_dirs = [box[1] - box[0], box[2] - box[1], vecs[:, -1], vecs[:, 0]]
+    if getattr(th, "edge_first_directions", True):
+        raw_dirs = [box[1] - box[0], box[2] - box[1], vecs[:, -1], vecs[:, 0]]
+    else:  # exact V2 order (PCA first)
+        raw_dirs = [vecs[:, -1], vecs[:, 0], box[1] - box[0], box[2] - box[1]]
     if row_yaw_rad is not None:
         raw_dirs.extend([
             np.array([np.cos(row_yaw_rad), np.sin(row_yaw_rad)]),

@@ -93,12 +93,18 @@ class WP3SceneBridge(Node):
     # ------------------------------------------------------------------ input
     def on_markers(self, msg):
         now = time.monotonic()
+        # WP3 publishes DELETEALL followed by every current track: the array is a full snapshot. Blocks that
+        # are no longer listed (retired tracks) must leave the planning scene, or they stay as phantom obstacles.
+        snapshot = any(m.action == Marker.DELETEALL for m in msg.markers)
+        listed = set()
         for m in msg.markers:
             if m.action == Marker.DELETEALL:
                 continue
             if self.args.ns and m.ns not in self.args.ns:
                 continue
             key = scene_id(m.ns, m.id)
+            if m.action != Marker.DELETE and m.type == Marker.CUBE:
+                listed.add(key)
             if m.action == Marker.DELETE:
                 self.tracker.delete(key)
                 continue
@@ -110,8 +116,10 @@ class WP3SceneBridge(Node):
                 continue
             w = self.to_world(m.header.frame_id, m.pose)
             if w is None:
-                continue
+                continue                     # no TF yet: still listed, so the last known pose is kept
             self.tracker.observe(key, dims, w[0], w[1], now)
+        if snapshot:
+            self.tracker.retain_only(listed)
 
     def on_scene_json(self, msg):
         now = time.monotonic()
@@ -120,11 +128,23 @@ class WP3SceneBridge(Node):
         except Exception as e:
             self.warn('json', f'invalid JSON on {self.args.scene_topic}: {e}')
             return
+        status = payload.get('status', 'ok')
+        if status != 'ok':
+            # uncalibrated / no_valid_stream / no_plane / camera_moved / roi_empty: nothing in this message is
+            # usable, and it is not evidence that blocks left. Keep the last known scene; it ages to STALE.
+            self.warn('status', f'WP3 status "{status}" (calibration_epoch={payload.get("calibration_epoch")}): '
+                                f'scene not updated')
+            return
         frame_id = payload.get('frame_id', 'jenga_table')
+        # Every live track (MEASURED, DISPLACED, OCCLUDED, STALE) is listed in each atomic snapshot. A track that
+        # is missing has been retired by WP3, so its collision object is removed.
+        self.tracker.retain_only(scene_id('wp3_blocks', tr.get('track_id', 0)) for tr in payload.get('tracks', ()))
         for tr in payload.get('tracks', ()):
             state = tr.get('state', '')
             if state not in ('MEASURED', 'DISPLACED'):
-                continue
+                continue                     # held / stale tracks keep their last pose (not refreshed)
+            # Collision safety: identity-ambiguous or not-yet-eligible blocks are still physically there, so they
+            # stay obstacles by default. --commit-eligible-only is for a WP5 *target* view, not the collision world.
             if self.args.commit_eligible_only and not tr.get('snapshot_commit_eligible', False):
                 continue
             tid = tr.get('track_id', 0)
@@ -168,15 +188,17 @@ class WP3SceneBridge(Node):
             scene.world.collision_objects.append(
                 CollisionObject(id='jenga_block', operation=CollisionObject.REMOVE))
             self.pending_demo_removal = False
-        actions = self.tracker.actions(time.monotonic())
+        pending = bool(self.tracker.deleted) or bool(self.tracker.latest)
+        # In the gripper: the twin owns it until release. Ask MoveIt first so the tracker leaves those blocks
+        # pending instead of recording an update that was never applied.
+        attached = self.attached_ids() if pending else set()
+        before = self.tracker.snapshot()
+        actions = self.tracker.actions(time.monotonic(), skip=attached)
         if not actions and not scene.world.collision_objects:
             return
-        attached = self.attached_ids() if actions else set()
         log = []
         for act in actions:
             kind, key = act[0], act[1]
-            if key in attached:
-                continue                     # in the gripper: the twin owns it until it is released
             if kind in ('add', 'move'):
                 _, _, dims, xyz, quat = act
                 obj = CollisionObject(id=key, operation=CollisionObject.ADD)
@@ -200,7 +222,8 @@ class WP3SceneBridge(Node):
                 for line in log:
                     self.get_logger().info(line)
             else:
-                self.get_logger().error('apply_planning_scene failed')
+                self.tracker.restore(before)  # retry on the next flush instead of silently dropping obstacles
+                self.get_logger().error('apply_planning_scene failed; will retry')
 
 
 def main():
@@ -208,7 +231,10 @@ def main():
     ap.add_argument('--topic', default=TOPIC)
     ap.add_argument('--scene-topic', default=SCENE_TOPIC)
     ap.add_argument('--use-scene-json', action='store_true', help='consume /wp3_live/scene_observation JSON directly')
-    ap.add_argument('--commit-eligible-only', action='store_true', help='with --use-scene-json, require snapshot_commit_eligible=True')
+    ap.add_argument('--commit-eligible-only', action='store_true',
+                    help='with --use-scene-json, only insert snapshot_commit_eligible blocks. Leave OFF for the '
+                         'collision world: an identity-ambiguous block is still a physical obstacle. Use it only '
+                         'for a separate WP5 target view.')
     ap.add_argument('--ns', nargs='*', default=list(DEFAULT_NS), help='only these marker namespaces are blocks (excludes wp3_ambiguous by default)')
     ap.add_argument('--stale-after', type=float, default=2.0, help='s unseen before a block is greyed out')
     ap.add_argument('--remove-after', type=float, default=None, help='s unseen before a block is removed')

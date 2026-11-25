@@ -166,6 +166,13 @@ def test_ros2_display_node_loopback_dropout_and_zero_moveit(tmp_path, with_third
 
         # A newer unmatched RGB callback must not overwrite the last complete exposure.
         paired_ns = int(now_msg.sec) * 1_000_000_000 + int(now_msg.nanosec)
+        # V3.1: the shared single-threaded executor may still hold the last pair's callbacks if a tick used the
+        # whole spin window on a slow host; wait (bounded) until both halves of that exposure have arrived.
+        wait_pair = time.monotonic() + 1.0
+        while time.monotonic() < wait_pair and not (
+            paired_ns in node._latest["wrist"]["rgb"] and paired_ns in node._latest["wrist"]["depth"]
+        ):
+            exec_.spin_once(timeout_sec=0.01)
         unmatched = bridge.cv2_to_imgmsg(rw, encoding="rgb8")
         unmatched.header.frame_id = cam_w.frame_id
         offset_ns = int(node.cfg.thresholds.max_pair_skew_s * 1e9) + 100_000_000

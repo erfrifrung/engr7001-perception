@@ -20,11 +20,20 @@ DW = DwellStatus(True, True, True, True, 0.0, 0.1, 0.2, 80.0, "ok")
 CW, TW, CS, TS = cameras()
 
 
+def _v3_cfg():
+    """V3 on, with only the deterministic node cap: functional verdicts must not depend on host speed."""
+    cfg = preset_config("printed_jenga")
+    cfg.enable_v3_regions = True
+    cfg.v3_frame_budget_ms = 1e9
+    cfg.v3_region_budget_ms = 1e9
+    return cfg
+
+
 def _run(objs, seed=3, **cfg_kw):
     rng = np.random.default_rng(seed)
     rw, dw = render(CW, TW, objs, rng, noise_m=0.00045)
     rs, ds = render(CS, TS, objs, rng, noise_m=0.0008)
-    cfg = preset_config("printed_jenga")
+    cfg = _v3_cfg()
     for k, v in cfg_kw.items():
         setattr(cfg, k, v)
     return run_perception_epoch(wrist=ViewInput("wrist", CW, rw, dw, TW, 1, 1), side=ViewInput("tripod", CS, rs, ds, TS, 1, 1),
@@ -105,5 +114,32 @@ def test_floating_occluder_on_layer_multiple_not_published_as_stack():
     rw, dw = render(CW, TW, objs, rng, noise_m=0.00045)
     rs, ds = render(CS, TS, objs, rng, noise_m=0.0008)
     r = run_perception_epoch(wrist=ViewInput("wrist", CW, rw, dw, TW, 1, 1), side=ViewInput("tripod", CS, rs, ds, TS, 1, 1),
-                             config=preset_config("printed_jenga"), policy="merged_corroborated", dwell=DW, robot_links=FAR)
+                             config=_v3_cfg(), policy="merged_corroborated", dwell=DW, robot_links=FAR)
     assert all(p.z_top_m < 0.03 for p in r.poses)
+
+
+def test_v31_default_is_v2_path():
+    """V3.1: the library default runs the V2 path; V3 must be opted into."""
+    assert preset_config("printed_jenga").enable_v3_regions is False
+
+
+def test_json_profile_can_switch_v3(tmp_path):
+    """V3.1: v3_* keys in a flat lab JSON are honoured (they were silently dropped before)."""
+    import json
+    from wp3_live import load_runtime_config
+    p = tmp_path / "prof.json"
+    p.write_text(json.dumps({"enable_v3_regions": True, "v3_solver": "enumerate", "v3_frame_budget_ms": 45.0,
+                             "persistent_joint_occlusion": False, "reanchor_after": 3}))
+    cfg = load_runtime_config(p)
+    assert (cfg.enable_v3_regions, cfg.v3_solver, cfg.v3_frame_budget_ms) == (True, "enumerate", 45.0)
+    assert (cfg.persistent_joint_occlusion, cfg.reanchor_after) == (False, 3)
+
+
+def test_uncalibrated_primary_publishes_no_table_poses():
+    """V3.1 frame authority: no camera->table transform -> status 'uncalibrated', zero poses (live mode)."""
+    objs = [box(0, 0, 0, 0, 0.015)]
+    rng = np.random.default_rng(5)
+    rw, dw = render(CW, TW, objs, rng, noise_m=0.00045)
+    r = run_perception_epoch(wrist=ViewInput("wrist", CW, rw, dw, None, 1, 1, pose_frame_mode="table"), side=None,
+                             config=_v3_cfg(), policy="merged_corroborated", dwell=DW)
+    assert r.status == "uncalibrated" and r.poses == []

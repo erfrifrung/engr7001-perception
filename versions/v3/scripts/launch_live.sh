@@ -16,6 +16,10 @@ Options:
   --side-ns NS      Fixed side camera namespace (default: /perception/tripod)
   --third-ns NS     Additional qualified fixed view for seam checks (e.g. /perception/third)
   --rate-hz HZ      Loop rate Hz (default: 15.0)
+  --v3 on|off       V3 region stage (default: off = tuned V2 path, the M1 live default)
+  --v3-solver S     prove | enumerate (only with --v3 on; default: config value)
+  --v3-budget-ms MS V3 per-frame budget (default: config value)
+  --temporal-skip on|off  Re-publish cached geometry on stationary frames (default: off)
 Stop with Ctrl+C (SIGINT); Wait 1 s for JSONL flush.
 HELP
     exit 0
@@ -37,6 +41,12 @@ WRIST_NS="/perception/wrist"
 SIDE_NS="/perception/tripod"
 THIRD_NS=""
 RATE_HZ="15.0"
+V3="false"
+V3_SOLVER=""
+V3_BUDGET="-1.0"
+TSKIP="false"
+
+onoff() { case "$1" in on|true|1) echo true ;; off|false|0) echo false ;; *) echo "expected on|off, got $1" >&2; exit 2 ;; esac; }
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -47,6 +57,10 @@ while [[ $# -gt 0 ]]; do
         --side-ns) SIDE_NS="$2"; shift 2 ;;
         --third-ns) THIRD_NS="$2"; shift 2 ;;
         --rate-hz) RATE_HZ="$2"; shift 2 ;;
+        --v3) V3="$(onoff "$2")"; shift 2 ;;
+        --v3-solver) V3_SOLVER="$2"; shift 2 ;;
+        --v3-budget-ms) V3_BUDGET="$2"; shift 2 ;;
+        --temporal-skip) TSKIP="$(onoff "$2")"; shift 2 ;;
         *) echo "Unknown arg: $1" >&2; exit 2 ;;
     esac
 done
@@ -64,7 +78,7 @@ set -u
 export PYTHONPATH="$IMPL_ROOT:${PYTHONPATH:-}"
 mkdir -p "$SAVE_DIR"
 
-echo "Launching wp3_live_node (policy=$POLICY, config=$CONFIG, save_dir=$SAVE_DIR)"
+echo "Launching wp3_live_node (policy=$POLICY, config=$CONFIG, v3=$V3, temporal_skip=$TSKIP, save_dir=$SAVE_DIR)"
 echo "Stop cleanly with Ctrl+C."
 ros2 launch wp3_live_perception wp3_live.launch.py \
     policy:="$POLICY" \
@@ -74,4 +88,8 @@ ros2 launch wp3_live_perception wp3_live.launch.py \
     side_ns:="$SIDE_NS" \
     third_ns:="$THIRD_NS" \
     rate_hz:="$RATE_HZ" \
+    enable_v3_regions:="$V3" \
+    v3_solver:="$V3_SOLVER" \
+    v3_frame_budget_ms:="$V3_BUDGET" \
+    enable_temporal_skip:="$TSKIP" \
     2>&1 | tee "$SAVE_DIR/live_node.log"

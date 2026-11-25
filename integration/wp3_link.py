@@ -133,7 +133,8 @@ class BlockTracker:
       ('add'|'move', key, dims, xyz, quat)   block is new or moved beyond the tolerances
       ('stale', key)                          not seen for stale_s: keep last pose, show it as old
       ('remove', key)                         not seen for remove_s (only if remove_s is set) or deleted
-    Tolerances match perception_bridge.py (3 mm, 2 deg, 180-deg yaw symmetry).
+    Tolerances match perception_bridge.py (3 mm, 2 deg, 180-deg yaw symmetry). Note these are an update
+    dead-band, not an accuracy requirement: the scene can lag WP3's latest pose by up to move_tol / yaw_tol.
     """
 
     def __init__(self, move_tol=0.003, yaw_tol=2.0, dim_tol=0.003, stale_s=2.0, remove_s=None):
@@ -158,6 +159,19 @@ class BlockTracker:
             self.delete(k)
         self.deleted |= set(self.applied)
 
+    def retain_only(self, keys):
+        """Snapshot semantics: every known block not in `keys` was removed upstream (e.g. a retired WP3 track)."""
+        keep = set(keys)
+        for k in [k for k in set(self.latest) | set(self.applied) if k not in keep]:
+            self.delete(k)
+
+    def snapshot(self):
+        """Copy of the bookkeeping, so a planning-scene update MoveIt rejects can be retried instead of lost."""
+        return dict(self.latest), dict(self.applied), set(self.stale), set(self.deleted)
+
+    def restore(self, snap):
+        self.latest, self.applied, self.stale, self.deleted = dict(snap[0]), dict(snap[1]), set(snap[2]), set(snap[3])
+
     def _changed(self, key, dims, xyz, quat):
         old = self.applied.get(key)
         if old is None:
@@ -169,14 +183,19 @@ class BlockTracker:
             return True
         return yaw_diff_deg(yaw_of_quat(quat), yaw_of_quat(oquat)) > self.yaw_tol
 
-    def actions(self, now):
+    def actions(self, now, skip=()):
+        """Planning-scene actions since the last call. Keys in `skip` (objects attached to the gripper) are left
+        untouched and stay pending, so a removal or move that happens while the twin owns them is not lost."""
+        skip = set(skip)
         out = []
-        for key in sorted(self.deleted):
+        for key in sorted(self.deleted - skip):
             out.append(('remove', key))
             self.applied.pop(key, None)
             self.stale.discard(key)
-        self.deleted.clear()
+        self.deleted &= skip
         for key, (dims, xyz, quat, seen) in sorted(self.latest.items()):
+            if key in skip:
+                continue
             age = now - seen
             if self.remove_s is not None and age > self.remove_s:
                 if key in self.applied:

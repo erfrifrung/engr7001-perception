@@ -23,6 +23,13 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("publish_overlay", default_value="true"),
         DeclareLaunchArgument("save_dir", default_value=""),
         DeclareLaunchArgument("rate_hz", default_value="15.0"),
+        # V3.1: V2 path by default; V3 region stage and frame skipping are explicit opt-ins.
+        DeclareLaunchArgument("enable_v3_regions", default_value="false"),
+        DeclareLaunchArgument("v3_solver", default_value=""),
+        DeclareLaunchArgument("v3_frame_budget_ms", default_value="-1.0"),
+        DeclareLaunchArgument("enable_temporal_skip", default_value="false"),
+        DeclareLaunchArgument("persistent_joint_occlusion", default_value="true"),
+        DeclareLaunchArgument("reanchor_after", default_value="2"),
         Node(
             package="wp3_live_perception",
             executable="wp3_live_node",
@@ -38,6 +45,12 @@ def generate_launch_description() -> LaunchDescription:
                 "publish_overlay": LaunchConfiguration("publish_overlay"),
                 "save_dir": LaunchConfiguration("save_dir"),
                 "rate_hz": LaunchConfiguration("rate_hz"),
+                "enable_v3_regions": ParameterValue(LaunchConfiguration("enable_v3_regions"), value_type=bool),
+                "v3_solver": ParameterValue(LaunchConfiguration("v3_solver"), value_type=str),
+                "v3_frame_budget_ms": ParameterValue(LaunchConfiguration("v3_frame_budget_ms"), value_type=float),
+                "enable_temporal_skip": ParameterValue(LaunchConfiguration("enable_temporal_skip"), value_type=bool),
+                "persistent_joint_occlusion": ParameterValue(LaunchConfiguration("persistent_joint_occlusion"), value_type=bool),
+                "reanchor_after": ParameterValue(LaunchConfiguration("reanchor_after"), value_type=int),
             }],
         ),
     ])

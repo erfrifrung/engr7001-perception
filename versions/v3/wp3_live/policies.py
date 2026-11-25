@@ -589,6 +589,12 @@ def run_perception_epoch(
             slot_occupancies=[], dwell=dwell, stage_timings_ms=timings, evidence_log={**ev, **view_diag},
         )
 
+    if T_tc is None and primary.pose_frame_mode != "plane":
+        # V3.1 frame authority: without a qualified camera->table transform the only frame available is a
+        # camera-local plane fit, which must never be published as `jenga_table`. Offline plane-frame replay
+        # (pose_frame_mode="plane") keeps its explicit opt-in behaviour.
+        return _finish_early("uncalibrated", {"reason": "missing_T_table_cam", "primary_role": primary.role})
+
     t_plane0 = time.perf_counter()
     pts_cam = deproj["pts_cam_f32"]
     pts_tbl = deproj["pts_tbl_f32"]
@@ -861,10 +867,11 @@ def run_perception_epoch(
     ):
         t_v3 = time.perf_counter()
         views: list[ViewDepth] = []
-        if config.v3_view_carving:
-            if primary.T_table_cam is not None or T_tc is not None:
-                wd = _depth_to_float32_roi(primary.depth_raw, primary.cam, None)
-                views.append(ViewDepth(primary.role, primary.cam.K_f64, np.linalg.inv(T_tc), wd))
+        # V3.1: carve only in the qualified table frame. In plane mode T_tc is a camera-local fit while the side
+        # and third views are registered to `jenga_table`; mixing them would carve occupied cells FREE.
+        if config.v3_view_carving and primary.T_table_cam is not None:
+            wd = _depth_to_float32_roi(primary.depth_raw, primary.cam, None)
+            views.append(ViewDepth(primary.role, primary.cam.K_f64, np.linalg.inv(primary.T_table_cam), wd))
             for sd in (side_data, third_data):
                 if sd is not None and sd.is_fresh and not sd.is_frozen:
                     views.append(ViewDepth("fixed", sd.cam.K_f64, np.linalg.inv(sd.T_table_cam), sd.depth_m))
