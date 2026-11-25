@@ -81,7 +81,7 @@ def method_cfg(m):
         if "slowdep" in m:
             cfg.v3_fast_deproject = False
         if m.startswith("v3"):
-            cfg.v3_solver = "enumerate" if "enum" in m else "prove"
+            cfg.v3_solver = "enumerate" if "enum" in m else ("adaptive" if "adapt" in m else "prove")
             if "nocarve" in m:
                 cfg.v3_view_carving = False
             if "noguard" in m:

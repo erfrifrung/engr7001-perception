@@ -691,6 +691,7 @@ def run_perception_epoch(
     warm_starts_new: list[WarmStartEntry] = []
     row_yaw_rad = float(np.radians(config.row_yaw_deg))
     label_map = np.zeros((grid.ny, grid.nx), dtype=np.int32)
+    w_depth_m = None
 
     if policy == "generic_watershed":
         fg_union = np.zeros((grid.ny, grid.nx), dtype=bool)
@@ -871,7 +872,10 @@ def run_perception_epoch(
         # V3.1: carve only in the qualified table frame. In plane mode T_tc is a camera-local fit while the side
         # and third views are registered to `jenga_table`; mixing them would carve occupied cells FREE.
         if config.v3_view_carving and primary.T_table_cam is not None:
-            wd = _depth_to_float32_roi(primary.depth_raw, primary.cam, None)
+            # V3.1: convert only the workspace ROI box (was the full frame every V3 frame). Pixels outside the box
+            # are 0 = invalid, so they can never carve a cell FREE; every ROI cell projects inside the box.
+            wd = w_depth_m if w_depth_m is not None else _depth_to_float32_roi(
+                primary.depth_raw, primary.cam, deproj["bbox_2d"] if use_precrop else None)
             views.append(ViewDepth(primary.role, primary.cam.K_f64, np.linalg.inv(primary.T_table_cam), wd))
             for sd in (side_data, third_data):
                 if sd is not None and sd.is_fresh and not sd.is_frozen:

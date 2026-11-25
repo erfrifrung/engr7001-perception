@@ -4,6 +4,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import cv2
 import numpy as np
+# V3.1: imported at load time; the in-function imports below used to cost ~0.1 s on the first robot-filtered frame
+from scipy.spatial.transform import Rotation as _Rotation  # noqa: F401
 
 
 def _point_to_segment_dist(pts: np.ndarray, a: np.ndarray, b: np.ndarray) -> np.ndarray:

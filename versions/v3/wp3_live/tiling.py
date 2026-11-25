@@ -383,7 +383,6 @@ class RegionModel:
         n_target = len(tcols)
         if not np.all(C[:, tcols].any(axis=0)):
             return [], False
-        P = len(places)
         # cell classes: identical columns of C (restricted to the target cells)
         colbytes = np.packbits(C[:, tcols].T, axis=1, bitorder="little")
         uniq, inv = np.unique(colbytes, axis=0, return_inverse=True)
@@ -532,6 +531,9 @@ class RegionModel:
 
         def refute(i: int, pool: list[Placement]) -> str | None:
             q = seed[i]
+            # V3.1 note: reusing per-pool search structures with a banned mask instead of this subset was tried and
+            # REVERTED: full-pool cell classes are finer, each DFS node scans more of them, and on the held-out
+            # split more searches hit the node cap (prove: 134 vs 169 published, p50 +18 ms on the WSL host).
             allowed = self.subset(pool, np.array([not self.same(r, q) for r in pool]))
             cex, to_ = self._cover(allowed, first_only=True, max_count=self.p.max_blocks, deadline=deadline,
                                    bound_by_best=False)
@@ -774,17 +776,17 @@ def refine_group(placements: list[Placement], pts_band: np.ndarray, hard_xy: np.
         pts_in = pts_band[inside]
         z_top = float(np.median(pts_in[:, 2])) if len(pts_in) else float("nan")
         yaw_f = (yaws[k] + np.pi / 2) % np.pi - np.pi / 2
-        # V3.1: measured footprint where both opposite edges are FREE-bordered (extent = sum of the two measured
-        # edge offsets); nominal otherwise. Previously always nominal, which made any size gate vacuous.
+        # V3.1 note: a measured footprint (sum of the two opposite 98th-percentile edge offsets) was tried and
+        # REVERTED: on the 168-scene held-out split it read widths of 30.3-30.7 mm for 25 mm blocks (edge
+        # outliers add up in the sum while they cancel in the centre). dims stay nominal for V3 poses, so the
+        # size gate is not evidence for them; the raw extent is kept in diagnostics for a future robust estimator.
         ea, eb = hard_e.get((k, "a"), []), hard_e.get((k, "b"), [])
-        L_m = float(sum(ea)) if len(ea) == 2 else L
-        W_m = float(sum(eb)) if len(eb) == 2 else W
         fit = BlockFit(
             xy_m=(float(c2[0]), float(c2[1])), z_center_m=z_top - block.height_m / 2, z_top_m=z_top,
             yaw_rad=float(yaw_f), yaw_deg_mod=float(np.degrees(yaw_f) % block.yaw_symmetry_deg),
-            dims_mm=(round(L_m * 1000, 1), round(W_m * 1000, 1)),
-            fill=float(len(pts_in)) / max(1.0, L * W / 4e-6), size_err=float(max(abs(L_m - L), abs(W_m - W))),
-            n_points=int(len(pts_in)), points_xyz=pts_in, covariance_xy_m2=None,
+            dims_mm=(round(L * 1000, 1), round(W * 1000, 1)),
+            fill=float(len(pts_in)) / max(1.0, L * W / 4e-6), size_err=0.0, n_points=int(len(pts_in)),
+            points_xyz=pts_in, covariance_xy_m2=None,
         )
         obs = 1.0
         if occ_xy is not None and len(occ_xy):
@@ -794,7 +796,8 @@ def refine_group(placements: list[Placement], pts_band: np.ndarray, hard_xy: np.
         ok = bool(pin_a and pin_b and obs >= min_observed_frac and (trusted is None or trusted[k]))
         out.append((fit, ok, {"pin_long": pin_a, "pin_short": pin_b, "observed_frac": round(obs, 3),
                               "shift_mm": [round(1000 * float(v), 2) for v in delta[k]],
-                              "dims_measured": [len(ea) == 2, len(eb) == 2]}))
+                              "raw_extent_mm": [round(1000 * float(sum(ea)), 1) if len(ea) == 2 else None,
+                                                round(1000 * float(sum(eb)), 1) if len(eb) == 2 else None]}))
     # V3.1: contacts go to the caller's list (was a function attribute shared by every caller/thread)
     if contacts_out is not None:
         contacts_out.extend((ki, kj, (float(n_[0]), float(n_[1]))) for ki, kj, n_ in all_contacts)
