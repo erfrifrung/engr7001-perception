@@ -406,7 +406,7 @@ def main(argv=None) -> None:
     ap.add_argument("--temporal-skip", choices=("off", "on"), default="off", help="Enable stationary-frame ROI skip during main sweep")
     ap.add_argument("--v3", choices=("config", "off", "on"), default="config",
                     help="V3 region stage: keep the config value, force off (tuned V2) or force on")
-    ap.add_argument("--v3-solver", choices=("prove", "enumerate"), default=None)
+    ap.add_argument("--v3-solver", choices=("prove", "enumerate", "adaptive"), default=None)
     ap.add_argument("--v3-frame-budget-ms", type=float, default=None)
     args = ap.parse_args(argv)
 

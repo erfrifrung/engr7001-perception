@@ -136,8 +136,8 @@ class WP3LivePerceptionNode(Node):
         }
         v3_solver = str(self.get_parameter("v3_solver").value).strip()
         if v3_solver:
-            if v3_solver not in ("prove", "enumerate"):
-                raise ValueError(f"v3_solver must be 'prove' or 'enumerate', got {v3_solver!r}")
+            if v3_solver not in ("prove", "enumerate", "adaptive"):
+                raise ValueError(f"v3_solver must be 'prove', 'enumerate' or 'adaptive', got {v3_solver!r}")
             overrides["v3_solver"] = v3_solver
         v3_budget = float(self.get_parameter("v3_frame_budget_ms").value)
         if v3_budget > 0.0:

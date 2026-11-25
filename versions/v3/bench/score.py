@@ -1,7 +1,8 @@
 """Score JSONL outputs of run_scenes.py against scene ground truth (one-to-one Hungarian on 3D centre).
 
-Gates: legacy 15 mm (continuity) and provisional 5 mm / 5 deg (symmetry-aware) + fitted size within
-+-7.5 mm / +-5 mm.  The provisional gate is NOT a production threshold: WP5 (fixture owner) must confirm it.
+Gates: legacy 15 mm (continuity) and provisional 5 mm / 5 deg (symmetry-aware) + |dz| <= 3 mm + fitted size
+within +-7.5 mm / +-5 mm.  The provisional gate is NOT a production threshold: WP5 (fixture owner) must confirm it.
+V3.1: Z is gated and yaw / Z error percentiles are reported (they were collected but dropped from the summary).
 """
 from __future__ import annotations
 
@@ -13,7 +14,7 @@ from pathlib import Path
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-LEG, TIGHT, YAWT = 0.015, 0.005, 5.0
+LEG, TIGHT, YAWT, ZT = 0.015, 0.005, 5.0, 0.003
 
 
 def yaw_err(a, b):
@@ -30,7 +31,7 @@ def inside(xy, b, m=0.0):
 def score_scene(poses, blocks):
     n_p, n_g = len(poses), len(blocks)
     out = dict(n_pred=n_p, n_gt=n_g, matched15=0, tight=0, wrong_tight=0, wrong15=0, false_split=0,
-               false_merge=0, errs_mm=[], yaw_errs=[])
+               false_merge=0, errs_mm=[], yaw_errs=[], z_errs_mm=[], dims_errs_mm=[])
     pairs = []
     if n_p and n_g:
         P = np.array([[*p["xy"], p["z"]] for p in poses])
@@ -43,10 +44,13 @@ def score_scene(poses, blocks):
         p, b = poses[i], blocks[j]
         e = float(np.hypot(p["xy"][0] - b["cx"], p["xy"][1] - b["cy"]))
         ye = yaw_err(p["yaw"], b["yaw"])
+        ze = abs(float(p["z"]) - 0.5 * (b["z0"] + b["z1"]))
         dims = sorted(p["dims"], reverse=True)
-        ok = e <= TIGHT and ye <= YAWT and abs(dims[0] - 75) <= 7.5 and abs(dims[1] - 25) <= 5
+        ok = e <= TIGHT and ye <= YAWT and ze <= ZT and abs(dims[0] - 75) <= 7.5 and abs(dims[1] - 25) <= 5
         out["errs_mm"].append(round(e * 1000, 3))
         out["yaw_errs"].append(round(ye, 3))
+        out["z_errs_mm"].append(round(ze * 1000, 3))
+        out["dims_errs_mm"].append(round(max(abs(dims[0] - 75), abs(dims[1] - 25)), 2))
         if ok:
             tight_p.add(i)
     out["matched15"] = len(pairs)
@@ -70,6 +74,8 @@ def summarize(rows, index):
     fam = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
     lat = defaultdict(list)
     errs = defaultdict(list)
+    yerrs = defaultdict(list)
+    zerrs = defaultdict(list)
     for r in rows:
         if r.get("rep", 0) != 0:
             lat[r["method"]].append(r["timings"].get("total_ms", r["wall_ms"]))
@@ -79,6 +85,8 @@ def summarize(rows, index):
         m = r["method"]
         lat[m].append(r["timings"].get("total_ms", r["wall_ms"]))
         errs[m].extend(s["errs_mm"])
+        yerrs[m].extend(s["yaw_errs"])
+        zerrs[m].extend(s["z_errs_mm"])
         for k in ("n_pred", "n_gt", "matched15", "tight", "wrong_tight", "wrong15", "false_split", "false_merge"):
             agg[m][k] += s[k]
             fam[m][sc["family"]][k] += s[k]
@@ -96,6 +104,11 @@ def summarize(rows, index):
             scenes_with_ambiguity=int(a["abstained_scenes"]),
             centre_err_mm_p50=round(float(np.median(errs[m])), 3) if errs[m] else None,
             centre_err_mm_p95=round(float(np.percentile(errs[m], 95)), 3) if errs[m] else None,
+            yaw_err_deg_p50=round(float(np.median(yerrs[m])), 3) if yerrs[m] else None,
+            yaw_err_deg_p95=round(float(np.percentile(yerrs[m], 95)), 3) if yerrs[m] else None,
+            yaw_err_deg_max=round(float(np.max(yerrs[m])), 3) if yerrs[m] else None,
+            z_err_mm_p50=round(float(np.median(zerrs[m])), 3) if zerrs[m] else None,
+            z_err_mm_p95=round(float(np.percentile(zerrs[m], 95)), 3) if zerrs[m] else None,
             latency_ms=dict(n=len(L), p50=round(float(np.percentile(L, 50)), 2), p95=round(float(np.percentile(L, 95)), 2),
                             p99=round(float(np.percentile(L, 99)), 2), max=round(float(L.max()), 2)),
             per_family={f: {k: int(v) for k, v in d.items()} for f, d in sorted(fam[m].items())},

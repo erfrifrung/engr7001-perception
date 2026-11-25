@@ -36,7 +36,7 @@ STABLE, COUNTEREXAMPLE, TIMEOUT = "stable", "counterexample", "timeout"
 
 @dataclass(frozen=True)
 class TilingParams:
-    solver: str = "prove"              # "prove" (B) | "enumerate" (A)
+    solver: str = "prove"              # "prove" (B) | "enumerate" (A, STABLE not a proof) | "adaptive" (A then B, sound)
     bin_m: float = 0.0025              # placement lattice step in the rotated frame
     tol_bins: int = 1                  # free/overlap shrink and coverage expand tolerance (bins)
     max_free_cells: int = 2            # FREE cells tolerated inside the shrunk rectangle
@@ -224,17 +224,30 @@ class RegionModel:
         self.int_idx = np.flatnonzero(self.state != FREE)   # overlap universe (FREE cells never interior)
         self.full = (1 << self.n_must) - 1
         self.stats: dict[str, Any] = {"placements": 0, "ray_rejected": 0, "nodes": 0, "angles": 0}
+        self.last_truncated = False
         self._cache: dict[tuple[float, bool], tuple[list[Placement], np.ndarray, np.ndarray]] = {}
         self._mats: dict[int, tuple[np.ndarray, np.ndarray]] = {}
 
-    def placements(self, angles_deg: list[float], nms: bool = False) -> list[Placement]:
+    _ANGLE_CHUNK = 6
+
+    def placements(self, angles_deg: list[float], nms: bool = False, deadline: float | None = None) -> list[Placement]:
+        """Placements for the given angles. V3.1: generated in chunks with a deadline check between them (this
+        used to run unbounded, e.g. 218 ms on one flush triple). ``self.last_truncated`` is True when the
+        deadline cut the set short; callers must then treat the search as a TIMEOUT, never as a proof."""
+        self.last_truncated = False
         todo = [a for a in angles_deg if round(a, 3) not in self._cache]
-        if todo:
-            self._cache.update(self._placements_batch(todo))
+        for i in range(0, len(todo), self._ANGLE_CHUNK):
+            if deadline is not None and time.perf_counter() > deadline:
+                self.last_truncated = True
+                break
+            self._cache.update(self._placements_batch(todo[i:i + self._ANGLE_CHUNK]))
         out: list[Placement] = []
         covs, inns = [], []
         for a in angles_deg:
-            pl, cv_, in_ = self._cache[round(a, 3)]
+            hit = self._cache.get(round(a, 3))
+            if hit is None:
+                continue
+            pl, cv_, in_ = hit
             if pl:
                 out.extend(pl)
                 covs.append(cv_)
@@ -443,7 +456,12 @@ class RegionModel:
 
     # ---------------------------------------------------------------- approach A
     def solve_enumerate(self, angles: list[float], deadline: float) -> tuple[list[Placement], list[str], dict]:
-        places = self.placements(angles)
+        """Minimum-count exact covers only. Its COUNTEREXAMPLE verdicts are sound (a real alternative cover was
+        found); its STABLE verdicts are NOT proofs, because covers with more blocks are never searched (under
+        occlusion an extra hidden block can explain the same cells). See ``solve_adaptive``."""
+        places = self.placements(angles, deadline=deadline)
+        if self.last_truncated:
+            return [], [], {"abort": "timeout"}
         sols, to = self._cover(places, first_only=False, max_count=self.p.max_blocks, deadline=deadline,
                                bound_by_best=True)
         if to:
@@ -459,25 +477,57 @@ class RegionModel:
         return seed, verdicts, {"explanations": len(exps), "min_blocks": n_min}
 
     # ---------------------------------------------------------------- approach B
-    def solve_prove(self, shortlist: list[float], deadline: float) -> tuple[list[Placement], list[str], dict]:
+    def solve_adaptive(self, shortlist: list[float], deadline: float) -> tuple[list[Placement], list[str], dict]:
+        """V3.1 sound adaptive solver: minimum-count enumeration first, then counterexample search.
+
+        Only enumeration's COUNTEREXAMPLE verdicts are kept (sound). Every block enumeration calls STABLE is
+        still refuted by ``solve_prove``'s search over any block count, so the published set is never larger
+        than ``prove`` alone would publish within the same budget. If enumeration aborts (timeout, too many
+        explanations, none), the full counterexample search decides.
+        """
+        seed, verdicts, d = self.solve_enumerate(shortlist, deadline)
+        if not seed:
+            s2, v2, d2 = self.solve_prove(shortlist, deadline)
+            d2["enumerate_abort"] = d.get("abort")
+            return s2, v2, d2
+        prior = [COUNTEREXAMPLE if v == COUNTEREXAMPLE else None for v in verdicts]
+        s2, v2, d2 = self.solve_prove(shortlist, deadline, prior=(seed, prior))
+        d2["enumerate_explanations"] = d.get("explanations")
+        d2["enumerate_pruned"] = sum(v is not None for v in prior)
+        return s2, v2, d2
+
+    def solve_prove(self, shortlist: list[float], deadline: float,
+                    prior: tuple[list[Placement], list[str | None]] | None = None) -> tuple[list[Placement], list[str], dict]:
         """Seed from the shortlist lattice; refute each seed block with a counterexample, searching the cheap
-        shortlist set first and escalating to the dense angle set only to *confirm* blocks that survive."""
-        seed_places = self.placements(shortlist)
-        sols, to = self._cover(seed_places, first_only=True, max_count=self.p.max_blocks, deadline=deadline,
-                               bound_by_best=False)
+        shortlist set first and escalating to the dense angle set only to *confirm* blocks that survive.
+
+        ``prior`` = (seed, verdicts) from a sound pre-pass: only COUNTEREXAMPLE/TIMEOUT entries may be set; None
+        entries are refuted here. A truncated placement set (deadline) yields TIMEOUT, never STABLE."""
+        seed_places = self.placements(shortlist, deadline=deadline)
         dense_angles = sorted(set([round(a, 3) for a in np.arange(0.0, 90.0, self.p.dense_angle_step_deg)]
                                   + [round(a, 3) for a in shortlist]))
         dense: list[Placement] | None = None
-        if not sols:
-            dense = self.placements(dense_angles)
-            sols, to = self._cover(dense, first_only=True, max_count=self.p.max_blocks, deadline=deadline,
+        dense_truncated = False
+        if prior is not None:
+            seed = list(prior[0])
+            verdicts: list[str | None] = [v if v in (COUNTEREXAMPLE, TIMEOUT) else None for v in prior[1]]
+        else:
+            sols, to = self._cover(seed_places, first_only=True, max_count=self.p.max_blocks, deadline=deadline,
                                    bound_by_best=False)
             if not sols:
-                return [], [], {"abort": "timeout" if to else "no_explanation"}
-            seed = [dense[k] for k in sols[0]]
-        else:
-            seed = [seed_places[k] for k in sols[0]]
-        verdicts: list[str | None] = [None] * len(seed)
+                dense = self.placements(dense_angles, deadline=deadline)
+                dense_truncated = self.last_truncated
+                sols, to = self._cover(dense, first_only=True, max_count=self.p.max_blocks, deadline=deadline,
+                                       bound_by_best=False)
+                if not sols:
+                    return [], [], {"abort": "timeout" if (to or dense_truncated) else "no_explanation"}
+                seed = [dense[k] for k in sols[0]]
+            else:
+                seed = [seed_places[k] for k in sols[0]]
+            verdicts = [None] * len(seed)
+        # V3.1: when the shortlist-stage pool already WAS the dense set, a refutation that found nothing there
+        # is exactly the dense refutation; re-running it (as before) only cost time.
+        shortlist_pool_is_dense = dense is not None and not dense_truncated
         escalated = 0
 
         def refute(i: int, pool: list[Placement]) -> str | None:
@@ -506,6 +556,8 @@ class RegionModel:
                     v = refute(i, seed_places if dense is None else dense)
                     if v is not None:
                         verdicts[i] = v
+                    elif shortlist_pool_is_dense:
+                        verdicts[i] = STABLE      # the complete dense search already found no counterexample
                 else:
                     # sound relaxation: if no non-overlapping alternative set can even cover this block's own
                     # occupied cells, no full counterexample exists -> STABLE without the global dense search
@@ -523,7 +575,11 @@ class RegionModel:
                             self.stats["local_proofs"] = self.stats.get("local_proofs", 0) + 1
                             continue
                     if dense is None:
-                        dense = self.placements(dense_angles)
+                        dense = self.placements(dense_angles, deadline=deadline)
+                        dense_truncated = self.last_truncated
+                    if dense_truncated or not dense:
+                        verdicts[i] = TIMEOUT     # an incomplete alternative set proves nothing
+                        continue
                     escalated += 1
                     v = refute(i, dense)
                     verdicts[i] = v if v is not None else STABLE
@@ -531,9 +587,7 @@ class RegionModel:
             "dense_placements": len(dense) if dense is not None else 0, "escalated": escalated,
             "seed": [(round(q.cx * 1000, 1), round(q.cy * 1000, 1), round(float(np.degrees(q.yaw)), 1)) for q in seed]}
 
-    def same(self, a: Placement, b: Placement) -> bool:
-        """Same physical hypothesis at the model's resolution: yaw within the angle step and the centre within
-        the lattice slop along each block axis (the joint refinement later decides the published pose)."""
+    def _same_in_frame_of(self, a: Placement, b: Placement) -> bool:
         d = abs((a.yaw - b.yaw + np.pi / 2) % np.pi - np.pi / 2)
         if d > np.radians(self.p.invariance_yaw_deg):
             return False
@@ -541,11 +595,44 @@ class RegionModel:
         ca, sa = np.cos(a.yaw), np.sin(a.yaw)
         return abs(dx * ca + dy * sa) <= self.p.invariance_xy_m and abs(-dx * sa + dy * ca) <= self.p.invariance_xy_m
 
+    def same(self, a: Placement, b: Placement) -> bool:
+        """Same physical hypothesis at the model's resolution: yaw within the angle step and the centre within
+        the lattice slop along each block axis (the joint refinement later decides the published pose).
+
+        V3.1: symmetric. The displacement used to be measured only in ``a``'s frame, so ``same(q, r)`` and
+        ``same(r, q)`` could disagree for rotated placements near the 7.6 mm bound (e.g. q=(0,0,0deg),
+        r=(7.9,-3.6 mm,7deg)). Pool exclusion and witness checks used opposite argument orders, so a genuine
+        counterexample could be excluded as "the same block". Requiring both directions can only make the
+        solver abstain more, never certify more.
+        """
+        return self._same_in_frame_of(a, b) and self._same_in_frame_of(b, a)
+
 
 # ----------------------------------------------------------------------------------------------- refinement
 
-def _refine_yaw(q: Placement, pts_band: np.ndarray, block: BlockSpec) -> float:
-    """Yaw from the straightest long edge (outermost point per 3 mm bin, line fit); +-3.5 deg clamp."""
+def _hard_long_sides(q: Placement, hard_xy: np.ndarray | None, block: BlockSpec) -> list[int]:
+    """Long sides (-1/+1 along the short axis) bordered by FREE cells along most of their length."""
+    if hard_xy is None or len(hard_xy) == 0:
+        return []
+    L, W = block.major_m, block.minor_m
+    ux = np.array([np.cos(q.yaw), np.sin(q.yaw)])
+    uy = np.array([-np.sin(q.yaw), np.cos(q.yaw)])
+    r = hard_xy - (q.cx, q.cy)
+    dt, dn = r @ ux, r @ uy
+    need = max(3, int(0.25 * (L / 2) / 0.002))
+    out = []
+    for sgn in (-1, 1):
+        sel = (sgn * dn > W / 2 - 0.002) & (sgn * dn < W / 2 + 0.006) & (np.abs(dt) <= L / 2 - 0.003)
+        if int(np.count_nonzero(sel)) >= need:
+            out.append(sgn)
+    return out
+
+
+def _refine_yaw(q: Placement, pts_band: np.ndarray, block: BlockSpec, hard_xy: np.ndarray | None = None) -> float:
+    """Yaw from the straightest long edge (outermost point per 3 mm bin, line fit); +-3.5 deg clamp.
+
+    V3.1: if any long edge is FREE-bordered, only those edges are used. A long edge shared with a neighbour
+    also collects the neighbour's top (the band extends 4 mm past the edge), which biases the line fit."""
     L, W = block.major_m, block.minor_m
     ux = np.array([np.cos(q.yaw), np.sin(q.yaw)])
     uy = np.array([-np.sin(q.yaw), np.cos(q.yaw)])
@@ -553,6 +640,9 @@ def _refine_yaw(q: Placement, pts_band: np.ndarray, block: BlockSpec) -> float:
     a, b = rel @ ux, rel @ uy
     inside = (np.abs(a) <= L / 2 - 0.006) & (np.abs(b) <= W / 2 + 0.004)
     est, wts = [], []
+    # V3.1 note: restricting this to FREE-bordered sides only (_hard_long_sides) was tried and REGRESSED the L
+    # layout (1.30 mm vs < 1.0 mm): a side can pass the 25 %-free test while still touching the neighbour along
+    # part of its length. A proper fix needs refine_group's segment-wise masking; until then both sides are used.
     for sgn in (-1, 1):
         sel = inside & (sgn * b > W / 2 - 0.004)
         if np.count_nonzero(sel) < 15:
@@ -576,7 +666,8 @@ def _refine_yaw(q: Placement, pts_band: np.ndarray, block: BlockSpec) -> float:
 def refine_group(placements: list[Placement], pts_band: np.ndarray, hard_xy: np.ndarray, block: BlockSpec,
                  edge_bias_m: float = 0.0, slop_m: float = 0.006, occ_xy: np.ndarray | None = None,
                  cell_m: float = 0.002, min_observed_frac: float = 0.6,
-                 trusted: list[bool] | None = None) -> list[tuple[BlockFit, bool, dict]]:
+                 trusted: list[bool] | None = None,
+                 contacts_out: list | None = None) -> list[tuple[BlockFit, bool, dict]]:
     """Joint sub-cell refinement of stable blocks.
 
     Equations: each FREE-bordered (hard) edge measured from raw points; each pair of parallel facing edges in
@@ -597,6 +688,7 @@ def refine_group(placements: list[Placement], pts_band: np.ndarray, hard_xy: np.
             edges.append((k, sgn * ux, L / 2, uy, W / 2, "a"))
             edges.append((k, sgn * uy, W / 2, ux, L / 2, "b"))
     rows, rhs, wts, info = [], [], [], []
+    hard_e: dict[tuple[int, str], list[float]] = {}     # (block, axis) -> measured edge offsets from cen0
     pinned_dirs: list[list[np.ndarray]] = [[] for _ in range(n)]
     hard_pts = hard_xy if len(hard_xy) else np.zeros((0, 2))
     for (k, nrm, h, tng, th, ax) in edges:
@@ -630,6 +722,7 @@ def refine_group(placements: list[Placement], pts_band: np.ndarray, hard_xy: np.
         rows.append(row); rhs.append(e - h); wts.append(1.0)
         pinned_dirs[k].append(nrm)
         info.append(("hard", k, ax))
+        hard_e.setdefault((k, ax), []).append(e)
     contacts = []
     all_contacts = []
     for i in range(len(edges)):
@@ -681,12 +774,17 @@ def refine_group(placements: list[Placement], pts_band: np.ndarray, hard_xy: np.
         pts_in = pts_band[inside]
         z_top = float(np.median(pts_in[:, 2])) if len(pts_in) else float("nan")
         yaw_f = (yaws[k] + np.pi / 2) % np.pi - np.pi / 2
+        # V3.1: measured footprint where both opposite edges are FREE-bordered (extent = sum of the two measured
+        # edge offsets); nominal otherwise. Previously always nominal, which made any size gate vacuous.
+        ea, eb = hard_e.get((k, "a"), []), hard_e.get((k, "b"), [])
+        L_m = float(sum(ea)) if len(ea) == 2 else L
+        W_m = float(sum(eb)) if len(eb) == 2 else W
         fit = BlockFit(
             xy_m=(float(c2[0]), float(c2[1])), z_center_m=z_top - block.height_m / 2, z_top_m=z_top,
             yaw_rad=float(yaw_f), yaw_deg_mod=float(np.degrees(yaw_f) % block.yaw_symmetry_deg),
-            dims_mm=(round(L * 1000, 1), round(W * 1000, 1)),
-            fill=float(len(pts_in)) / max(1.0, L * W / 4e-6), size_err=0.0, n_points=int(len(pts_in)),
-            points_xyz=pts_in, covariance_xy_m2=None,
+            dims_mm=(round(L_m * 1000, 1), round(W_m * 1000, 1)),
+            fill=float(len(pts_in)) / max(1.0, L * W / 4e-6), size_err=float(max(abs(L_m - L), abs(W_m - W))),
+            n_points=int(len(pts_in)), points_xyz=pts_in, covariance_xy_m2=None,
         )
         obs = 1.0
         if occ_xy is not None and len(occ_xy):
@@ -695,8 +793,11 @@ def refine_group(placements: list[Placement], pts_band: np.ndarray, hard_xy: np.
             obs = n_in / (L * W / cell_m ** 2)
         ok = bool(pin_a and pin_b and obs >= min_observed_frac and (trusted is None or trusted[k]))
         out.append((fit, ok, {"pin_long": pin_a, "pin_short": pin_b, "observed_frac": round(obs, 3),
-                              "shift_mm": [round(1000 * float(v), 2) for v in delta[k]]}))
-    refine_group.last_contacts = [(ki, kj, (float(n_[0]), float(n_[1]))) for ki, kj, n_ in all_contacts]
+                              "shift_mm": [round(1000 * float(v), 2) for v in delta[k]],
+                              "dims_measured": [len(ea) == 2, len(eb) == 2]}))
+    # V3.1: contacts go to the caller's list (was a function attribute shared by every caller/thread)
+    if contacts_out is not None:
+        contacts_out.extend((ki, kj, (float(n_[0]), float(n_[1]))) for ki, kj, n_ in all_contacts)
     return out
 
 
@@ -900,6 +1001,8 @@ def explain_region(
         model = RegionModel(block, p, st, must, xw, yw, grid.cell_m, layer, ray_check)
         if p.solver == "enumerate":
             seed, verdicts, d2 = model.solve_enumerate(shortlist, deadline)
+        elif p.solver == "adaptive":
+            seed, verdicts, d2 = model.solve_adaptive(shortlist, deadline)
         else:
             seed, verdicts, d2 = model.solve_prove(shortlist, deadline)
         diag.update(d2)
@@ -912,9 +1015,10 @@ def explain_region(
     # guard must see every block of the explanation (a proven block next to a timed-out one is still a seam)
     occ_xy = np.stack([xw[must], yw[must]], axis=1)
     trusted = [v == STABLE for v in verdicts]
+    contacts: list = []
     refined = refine_group(seed, pts_band, hard_xy, block, p.edge_bias_m, occ_xy=occ_xy, cell_m=grid.cell_m,
-                           min_observed_frac=p.min_observed_frac, trusted=trusted) if any(trusted) else []
-    contacts = getattr(refine_group, "last_contacts", []) if refined else []
+                           min_observed_frac=p.min_observed_frac, trusted=trusted,
+                           contacts_out=contacts) if any(trusted) else []
     withheld = _slab_guard(refined, contacts, pts_band, block, cue_fn, diag) if (slab_guard and len(refined) >= 2) else set()
     refined = [(f, pinned and (k not in withheld), d) for k, (f, pinned, d) in enumerate(refined)]
     fits = [f for f, pinned, _ in refined if pinned]

@@ -85,6 +85,12 @@ def render(cam, T_tc, objects, rng, *, noise_m, hole_frac=0.0, edge_drop=0.0, ta
             p = ol[None, :] + dl[hit] * tnear[hit][:, None]
             on = (np.abs(p[:, 0] - ob["stripe_x"]) < 0.0008) & (ax == 2)
             cc[on] = (55, 50, 45)
+        if ob.get("stripes_y"):   # V3.1 adversary: periodic dark lines along the long axis (FDM-like texture)
+            p = ol[None, :] + dl[hit] * tnear[hit][:, None]
+            on = np.zeros(len(p), bool)
+            for s in ob["stripes_y"]:
+                on |= np.abs(p[:, 1] - s) < 0.0008
+            cc[on & (ax == 2)] = (55, 50, 45)
         rgb[hit] = cc
     depth = np.where(np.isfinite(t_best), t_best, 0.0).reshape(Hh, Ww)
     depth = depth + rng.normal(0.0, noise_m, depth.shape)

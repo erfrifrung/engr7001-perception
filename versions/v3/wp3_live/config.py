@@ -166,7 +166,7 @@ class RuntimeConfig:
     # V3 region stage (results/V3_RESEARCH.md D1-D3). Off -> exact tuned-V2 behaviour.
     # V3.1: OFF by default. Live M1 runs the V2 path; enable explicitly (JSON key or ROS parameter) to evaluate V3.
     enable_v3_regions: bool = False
-    v3_solver: str = "prove"               # "prove" (counterexample search) | "enumerate" (exact-cover enumeration)
+    v3_solver: str = "prove"               # "prove" | "enumerate" (STABLE is not a proof) | "adaptive" (sound)
     v3_view_carving: bool = True           # signed-depth see-through carving of UNKNOWN cells (wrist/side/third)
     v3_publish_unexplained: bool = True    # unexplained occupancy becomes an ambiguity cluster instead of vanishing
     v3_robot_unknown: bool = True          # projected robot capsules are UNKNOWN space

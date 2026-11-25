@@ -28,6 +28,7 @@ from .proposals import (
     BlockFit,
     ImageProjectionContext,
     PartitionHypothesis,
+    _count_periodic_dark_peaks,
     _make_partition_candidate,
     enumerate_partition_hypotheses,
     evaluate_cut_cues,
@@ -894,9 +895,18 @@ def run_perception_epoch(
             xy = np.ascontiguousarray(pts[:, :2], dtype=np.float32)
             # geometry predicts the seam to ~1 mm; look for appearance/depth evidence within +-0.8 mm of it
             # (V2's 1.5 mm offset lattice can straddle a narrow dark-gap-dark seam)
+            along, perp = xy @ d32, xy @ pd
+            # V3.1: count periodic dark stripes across the union (was hard-coded 0, which disabled the
+            # periodic-texture alias check, so a striped 75 x 50 slab could pass as two blocks via the RGB cue)
+            stripes = 0
+            if primary_ctx is not None and len(xy) >= 20:
+                lo_a, hi_a = (float(v) for v in np.percentile(along, (4.0, 96.0)))
+                p_lo, p_hi = (float(v) for v in np.percentile(perp, (6.0, 94.0)))
+                stripes = _count_periodic_dark_peaks(xy, float(np.median(pts[:, 2])), d32, pd, lo_a, hi_a,
+                                                     p_lo, p_hi, primary_ctx)
             cue = None
             for dc in (0.0, -0.0008, 0.0008):
-                cue = evaluate_cut_cues(pts, xy @ d32, xy @ pd, float(cut_val) + dc, d32, pd, primary_ctx, th, 0)
+                cue = evaluate_cut_cues(pts, along, perp, float(cut_val) + dc, d32, pd, primary_ctx, th, stripes)
                 if cue.depth_step_ok or cue.depth_trough_ok:
                     return True, "depth"
                 if cue.rgb_ok and not cue.periodic_texture_alias:
@@ -939,7 +949,7 @@ def run_perception_epoch(
             unresolved=unresolved, hm=hm, grid=grid, block=block, config=config, views=views,
             ambiguous=ambiguous, confident_with_src=confident_with_src, label_map=label_map,
             robot_unknown=r_unk, make_cluster=_cluster, t_frame0=t_total_0, cue_fn=_cue,
-            region_cache=_v3_region_cache(temporal_cache, config),
+            region_cache=_v3_region_cache(temporal_cache, config), robot_links=robot_links,
         )
         timings["v3_regions_ms"] = round((time.perf_counter() - t_v3) * 1000.0, 3)
         split_logs.append({"v3": {k: v for k, v in v3_stats.items() if k != "ms"}})

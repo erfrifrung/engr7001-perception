@@ -129,7 +129,8 @@ def test_twin_bridge_places_v3_blocks_and_parses_recorded_v2():
     for key, t in published.items():
         dims, xyz, quat, _ = b.tracker.latest[key]
         assert np.allclose(xyz, t["pose_table_m"], atol=1e-9)
-        assert abs(max(dims[:2]) - 0.075) < 1e-6 and abs(min(dims[:2]) - 0.025) < 1e-6
+        # V3.1: dims are measured where both opposite edges are FREE-bordered (were always nominal)
+        assert abs(max(dims[:2]) - 0.075) < 0.0025 and abs(min(dims[:2]) - 0.025) < 0.0025
     acts = b.tracker.actions(time.monotonic())
     assert {a[1] for a in acts if a[0] in ("add", "move")} >= set(published)
 

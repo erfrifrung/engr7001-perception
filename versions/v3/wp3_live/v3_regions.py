@@ -44,7 +44,10 @@ def robot_unknown_cells(grid: HeightmapGrid, robot_links: dict | None, *, tcp_of
         ptcp = pos("link_tcp")
         ptcp = ptcp if ptcp is not None else p6 + R6 @ np.array([0.0, 0.0, tcp_offset_z_m])
         palm = p6 + (ptcp - p6) * 0.65
-        caps += [(p6, palm, 0.055), (palm, ptcp, finger_radius_m)]
+        # V3.1: wrist-camera housing, as removed from the point cloud by filter_robot_links(_fast). Without it the
+        # filtered mount left a hole that became FREE instead of UNKNOWN.
+        p_wrist_cam = p6 + R6 @ np.array([-0.065, 0.0, 0.070])
+        caps += [(p6, palm, 0.055), (palm, ptcp, finger_radius_m), (p6, p_wrist_cam, 0.045)]
     if not caps:
         return None
     rr, cc = np.mgrid[0:grid.ny, 0:grid.nx]
@@ -59,6 +62,11 @@ def robot_unknown_cells(grid: HeightmapGrid, robot_links: dict | None, *, tcp_of
         d = np.hypot(x - (a[0] + t * ab[0]), y - (a[1] + t * ab[1]))
         out |= d <= r
     return out
+
+
+def robot_links_have_hand(robot_links: dict | None) -> bool:
+    """The hand (link6, which also places palm, fingers and wrist camera) is what can sit on a layer multiple."""
+    return bool(robot_links) and "link6" in robot_links
 
 
 def run_v3_regions(
@@ -77,6 +85,7 @@ def run_v3_regions(
     t_frame0: float,
     cue_fn=None,
     region_cache=None,
+    robot_links: dict | None = None,
 ) -> dict[str, Any]:
     """Mutates ``confident_with_src``, ``ambiguous`` and ``label_map``; returns a diagnostics dict."""
     stats: dict[str, Any] = {"regions": 0, "resolved_blocks": 0, "skipped_deadline": 0, "verdicts": {}, "ms": []}
@@ -106,7 +115,8 @@ def run_v3_regions(
             bucket.setdefault(int(lab[r, c]), []).append((comp, amb))
         groups.extend(bucket.values())
     groups.sort(key=lambda g: -sum(int(c["area_cells"]) for c, _ in g))
-    tf_ok = robot_unknown is not None or not config.enable_robot_self_filter
+    # V3.1: partial TF (e.g. only link_base/link1) does not locate the hand, so it does not qualify upper layers.
+    tf_ok = (robot_unknown is not None and robot_links_have_hand(robot_links)) or not config.enable_robot_self_filter
     for g in groups:
         ambs = [a for _, a in g if a is not None]
         if not tf_ok and g[0][0]["band_m"][0] > 1.2 * block.height_m:

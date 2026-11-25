@@ -143,16 +143,26 @@ def test_ros2_display_node_loopback_dropout_and_zero_moveit(tmp_path, with_third
 
         bridge = CvBridge()
         spin_for(0.06)  # Allow /tf_static callback to reach node's tf_buffer
-        # Spin 6 dual-camera ticks with stationary joint_states
+        # Spin dual-camera ticks with stationary joint_states.
+        # V3.1: deterministic on slow hosts. Each iteration delivers two joint samples *before* the frame (the dwell
+        # gate needs >= 2 inside its 150 ms window), then waits (bounded) for the tick on that frame instead of a
+        # fixed 80 ms spin that one slow tick can consume on the shared single-threaded executor.
         for k in range(6):
+            for _ in range(2):
+                pub_js.publish(JointState(header=Header(stamp=node.get_clock().now().to_msg()), position=[0.0] * 6))
+                spin_for(0.01)
             now_msg = node.get_clock().now().to_msg()
+            now_ns_k = int(now_msg.sec) * 1_000_000_000 + int(now_msg.nanosec)
             pub_js.publish(JointState(header=Header(stamp=now_msg), position=[0.0] * 6))
             for role, cam, rgb, dep in camera_inputs:
                 pr, pd, pci = pubs[role]
                 m_rgb = bridge.cv2_to_imgmsg(rgb, encoding="rgb8"); m_rgb.header.stamp = now_msg; m_rgb.header.frame_id = cam.frame_id
                 m_dep = bridge.cv2_to_imgmsg(dep, encoding="16UC1"); m_dep.header.stamp = now_msg; m_dep.header.frame_id = cam.frame_id
                 pci.publish(make_cinfo(cam, now_msg)); pr.publish(m_rgb); pd.publish(m_dep)
-            spin_for(0.08)
+            wait_tick = time.monotonic() + 0.6
+            while time.monotonic() < wait_tick and not any(s.get("observation_stamp_ns", 0) >= now_ns_k for s in received_scenes):
+                exec_.spin_once(timeout_sec=0.01)
+            spin_for(0.02)
 
         assert any(s["fallback_mode"] == "dual_view" and len(s["tracks"]) == 2 for s in received_scenes), f"Got scenes: {received_scenes}"
         if with_third:
@@ -185,9 +195,15 @@ def test_ros2_display_node_loopback_dropout_and_zero_moveit(tmp_path, with_third
         # Freeze side camera (> 0.65 s without new unique frames) -> MUST degrade cleanly to wrist_only!
         spin_for(0.06)  # Drain any in-flight dual_view publish before sampling baseline
         time.sleep(0.65)
-        js1_msg = node.get_clock().now().to_msg()
-        pub_js.publish(JointState(header=Header(stamp=js1_msg), position=[0.0] * 6))
-        spin_for(0.03)
+        # V3.1: the dwell gate needs >= 2 joint samples inside its 150 ms window *before* the frame is processed;
+        # on a single-threaded executor the frame callbacks can otherwise overtake the second sample.
+        n_js0 = len(node.dwell_gate._joints)
+        for _ in range(3):
+            pub_js.publish(JointState(header=Header(stamp=node.get_clock().now().to_msg()), position=[0.0] * 6))
+            spin_for(0.02)
+        wait_js = time.monotonic() + 0.5
+        while time.monotonic() < wait_js and len(node.dwell_gate._joints) < n_js0 + 3:
+            exec_.spin_once(timeout_sec=0.01)
         now_msg = node.get_clock().now().to_msg()
         now_msg_ns = int(now_msg.sec) * 1_000_000_000 + int(now_msg.nanosec)
         pub_js.publish(JointState(header=Header(stamp=now_msg), position=[0.0] * 6))
@@ -204,11 +220,21 @@ def test_ros2_display_node_loopback_dropout_and_zero_moveit(tmp_path, with_third
         # Complete stream loss (BOTH wrist and side stop for > 0.65 s) -> MUST publish stale/no_valid_stream & degrade tracks!
         n_before_loss = len(received_scenes)
         time.sleep(0.65)
-        wait_loss = time.monotonic() + 0.8
-        while time.monotonic() < wait_loss and len(received_scenes) <= n_before_loss:
+        # V3.1: judge a scene published AFTER the outage (a scene published before the sleep can still be in
+        # flight and arrive first on the shared executor).
+        t_loss_ns = node.get_clock().now().nanoseconds
+        # Requirement under test: loss is REPORTED within a bound (1.2 s after the outage), with heartbeats.
+        wait_loss = time.monotonic() + 1.2
+        while time.monotonic() < wait_loss and not any(
+            s["publish_stamp_ns"] >= t_loss_ns and s["fallback_mode"] == "no_valid_stream"
+            for s in received_scenes[n_before_loss:]
+        ):
             exec_.spin_once(timeout_sec=0.02)
-        assert len(received_scenes) > n_before_loss, "Node stopped publishing heartbeat after complete stream loss!"
-        last_loss = received_scenes[-1]
+        post = [s for s in received_scenes[n_before_loss:] if s["publish_stamp_ns"] >= t_loss_ns]
+        assert post, "Node stopped publishing heartbeat after complete stream loss!"
+        lost = [s for s in post if s["fallback_mode"] == "no_valid_stream"]
+        assert lost, f"stream loss not reported within 1.2 s: {[s['fallback_mode'] for s in post]}"
+        last_loss = lost[-1]
         assert last_loss["fallback_mode"] == "no_valid_stream"
         assert all(tr["state"] in ("OCCLUDED", "STALE") for tr in last_loss["tracks"])
     finally:
