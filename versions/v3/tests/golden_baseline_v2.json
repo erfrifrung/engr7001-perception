@@ -1,0 +1,5015 @@
+{
+  "synthetic": {
+    "single_rotated_30deg": {
+      "whole_partition_mv": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 1,
+        "n_amb": 0,
+        "pose_sources": [
+          "single"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              0.0,
+              1e-06
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 29.9232
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "merged_corroborated": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 1,
+        "n_amb": 0,
+        "pose_sources": [
+          "single"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              0.0,
+              1e-06
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 29.9232
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "merged_wrist_rgb": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 1,
+        "n_amb": 0,
+        "pose_sources": [
+          "single"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              0.0,
+              1e-06
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 29.9232
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "generic_watershed": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 1,
+        "n_amb": 0,
+        "pose_sources": [
+          "watershed_single"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -1.2e-05,
+              -6e-06
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 29.9765
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      }
+    },
+    "flush_pair_corroborated": {
+      "whole_partition_mv": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 2,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv+side",
+          "split:mv+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              1e-06,
+              -0.012337
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0281
+          },
+          {
+            "xy_m": [
+              2e-06,
+              0.012795
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0489
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "merged_corroborated": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 2,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb+side",
+          "split:rgb+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              1e-06,
+              -0.012337
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0281
+          },
+          {
+            "xy_m": [
+              2e-06,
+              0.012795
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0489
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "merged_wrist_rgb": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 2,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb+side",
+          "split:rgb+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              1e-06,
+              -0.012337
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0281
+          },
+          {
+            "xy_m": [
+              2e-06,
+              0.012795
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0489
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "generic_watershed": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -1e-05,
+              -1e-05
+            ],
+            "n_est": 2,
+            "reason": "watershed_unresolved_multi_or_noncuboid"
+          }
+        ],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      }
+    },
+    "intact_1_stripe_single": {
+      "whole_partition_mv": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 1,
+        "n_amb": 0,
+        "pose_sources": [
+          "single"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.0,
+              1.3e-05
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "merged_corroborated": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 1,
+        "n_amb": 0,
+        "pose_sources": [
+          "single"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.0,
+              1.3e-05
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "merged_wrist_rgb": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 1,
+        "n_amb": 0,
+        "pose_sources": [
+          "single"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.0,
+              1.3e-05
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "generic_watershed": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 1,
+        "n_amb": 0,
+        "pose_sources": [
+          "watershed_single"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              0.0,
+              -1.4e-05
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      }
+    },
+    "intact_2_false_stripes_75x25": {
+      "whole_partition_mv": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              1e-05,
+              1e-05
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_square_mv"
+          }
+        ],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "merged_corroborated": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              1e-05,
+              1e-05
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "merged_wrist_rgb": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb_only",
+          "split:rgb_only",
+          "split:rgb_only"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -3.9e-05,
+              0.0
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0015
+          },
+          {
+            "xy_m": [
+              -0.0,
+              -0.025139
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0
+          },
+          {
+            "xy_m": [
+              1e-06,
+              0.025135
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0305
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "generic_watershed": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              1e-05,
+              1e-05
+            ],
+            "n_est": 3,
+            "reason": "watershed_unresolved_multi_or_noncuboid"
+          }
+        ],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      }
+    },
+    "square_75x75_layout_A_0deg_ends_visible": {
+      "whole_partition_mv": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv+side",
+          "split:mv+side",
+          "split:mv+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -3.9e-05,
+              0.0
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0015
+          },
+          {
+            "xy_m": [
+              -0.0,
+              -0.025139
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0
+          },
+          {
+            "xy_m": [
+              1e-06,
+              0.025135
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0305
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "merged_corroborated": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb+side",
+          "split:rgb+side",
+          "split:rgb+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -3.9e-05,
+              0.0
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0015
+          },
+          {
+            "xy_m": [
+              -0.0,
+              -0.025139
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0
+          },
+          {
+            "xy_m": [
+              1e-06,
+              0.025135
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0305
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "merged_wrist_rgb": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb+side",
+          "split:rgb+side",
+          "split:rgb+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -3.9e-05,
+              0.0
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0015
+          },
+          {
+            "xy_m": [
+              -0.0,
+              -0.025139
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0
+          },
+          {
+            "xy_m": [
+              1e-06,
+              0.025135
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0305
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "generic_watershed": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              1e-05,
+              1e-05
+            ],
+            "n_est": 3,
+            "reason": "watershed_unresolved_multi_or_noncuboid"
+          }
+        ],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      }
+    },
+    "square_75x75_layout_B_90deg_ends_visible": {
+      "whole_partition_mv": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv+side",
+          "split:mv+side",
+          "split:mv+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.025139,
+              -0.0
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 89.9989
+          },
+          {
+            "xy_m": [
+              0.0,
+              -0.0
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 89.9999
+          },
+          {
+            "xy_m": [
+              0.025133,
+              2e-06
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 89.9697
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "merged_corroborated": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb+side",
+          "split:rgb+side",
+          "split:rgb+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.025139,
+              -0.0
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 89.9989
+          },
+          {
+            "xy_m": [
+              0.0,
+              -0.0
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 89.9999
+          },
+          {
+            "xy_m": [
+              0.025133,
+              2e-06
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 89.9697
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "merged_wrist_rgb": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb+side",
+          "split:rgb+side",
+          "split:rgb+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.025139,
+              -0.0
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 89.9989
+          },
+          {
+            "xy_m": [
+              0.0,
+              -0.0
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 89.9999
+          },
+          {
+            "xy_m": [
+              0.025133,
+              2e-06
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 89.9697
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "generic_watershed": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              1e-05,
+              1e-05
+            ],
+            "n_est": 3,
+            "reason": "watershed_unresolved_multi_or_noncuboid"
+          }
+        ],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      }
+    },
+    "square_75x75_flush_ends_obscured": {
+      "whole_partition_mv": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              1e-05,
+              1e-05
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_square_mv"
+          }
+        ],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "UNKNOWN"
+          }
+        ]
+      },
+      "merged_corroborated": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              1e-05,
+              1e-05
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "UNKNOWN"
+          }
+        ]
+      },
+      "merged_wrist_rgb": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb_only",
+          "split:rgb_only",
+          "split:rgb_only"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -3.9e-05,
+              0.0
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0015
+          },
+          {
+            "xy_m": [
+              -0.0,
+              -0.025139
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0
+          },
+          {
+            "xy_m": [
+              1e-06,
+              0.025135
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0305
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "UNKNOWN"
+          }
+        ]
+      },
+      "generic_watershed": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              1e-05,
+              1e-05
+            ],
+            "n_est": 3,
+            "reason": "watershed_unresolved_multi_or_noncuboid"
+          }
+        ],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "UNKNOWN"
+          }
+        ]
+      }
+    },
+    "flush_pair_zero_side_contrast": {
+      "whole_partition_mv": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 2,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              1e-06,
+              -0.012337
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0281
+          },
+          {
+            "xy_m": [
+              2e-06,
+              0.012795
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0489
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "merged_corroborated": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -1e-05,
+              -1e-05
+            ],
+            "n_est": 2,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "merged_wrist_rgb": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 2,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb_only",
+          "split:rgb_only"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              1e-06,
+              -0.012337
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0281
+          },
+          {
+            "xy_m": [
+              2e-06,
+              0.012795
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0489
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      "generic_watershed": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -1e-05,
+              -1e-05
+            ],
+            "n_est": 2,
+            "reason": "watershed_unresolved_multi_or_noncuboid"
+          }
+        ],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      }
+    },
+    "real_step_3mm_no_side_needed": {
+      "whole_partition_mv": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 2,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:depth",
+          "split:depth"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              0.0,
+              0.012234
+            ],
+            "z_center_m": 0.0115,
+            "yaw_deg_mod": 0.0024
+          },
+          {
+            "xy_m": [
+              2e-06,
+              -0.012806
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0513
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "UNKNOWN"
+          }
+        ]
+      },
+      "merged_corroborated": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 2,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:depth",
+          "split:depth"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              0.0,
+              0.012234
+            ],
+            "z_center_m": 0.0115,
+            "yaw_deg_mod": 0.0024
+          },
+          {
+            "xy_m": [
+              2e-06,
+              -0.012806
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0513
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "UNKNOWN"
+          }
+        ]
+      },
+      "merged_wrist_rgb": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 2,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:depth",
+          "split:depth"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              0.0,
+              0.012234
+            ],
+            "z_center_m": 0.0115,
+            "yaw_deg_mod": 0.0024
+          },
+          {
+            "xy_m": [
+              2e-06,
+              -0.012806
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0513
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "UNKNOWN"
+          }
+        ]
+      },
+      "generic_watershed": {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 2,
+        "n_amb": 0,
+        "pose_sources": [
+          "watershed_single",
+          "watershed_single"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.0,
+              0.011291
+            ],
+            "z_center_m": 0.0105,
+            "yaw_deg_mod": 0.0
+          },
+          {
+            "xy_m": [
+              2.7e-05,
+              -0.013432
+            ],
+            "z_center_m": 0.0075,
+            "yaw_deg_mod": 0.0
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": -1,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 4,
+            "slot": 1,
+            "state": "UNKNOWN"
+          }
+        ]
+      }
+    }
+  },
+  "bag_12nov_baseline_20": {
+    "whole_partition_mv": [
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054591,
+              -0.103557
+            ],
+            "z_center_m": 0.016874,
+            "yaw_deg_mod": 2.8675
+          },
+          {
+            "xy_m": [
+              -0.00759,
+              -0.101087
+            ],
+            "z_center_m": 0.017368,
+            "yaw_deg_mod": 2.8675
+          },
+          {
+            "xy_m": [
+              0.038063,
+              -0.099288
+            ],
+            "z_center_m": 0.018327,
+            "yaw_deg_mod": 2.8675
+          }
+        ],
+        "ambiguous": [],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054718,
+              -0.103687
+            ],
+            "z_center_m": 0.017066,
+            "yaw_deg_mod": 12.1807
+          },
+          {
+            "xy_m": [
+              -0.007805,
+              -0.101019
+            ],
+            "z_center_m": 0.017217,
+            "yaw_deg_mod": 2.7946
+          },
+          {
+            "xy_m": [
+              0.037551,
+              -0.09963
+            ],
+            "z_center_m": 0.018582,
+            "yaw_deg_mod": 2.7946
+          }
+        ],
+        "ambiguous": [],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054655,
+              -0.103627
+            ],
+            "z_center_m": 0.016901,
+            "yaw_deg_mod": 2.8397
+          },
+          {
+            "xy_m": [
+              -0.007536,
+              -0.101034
+            ],
+            "z_center_m": 0.017033,
+            "yaw_deg_mod": 2.8397
+          },
+          {
+            "xy_m": [
+              0.038386,
+              -0.099737
+            ],
+            "z_center_m": 0.018406,
+            "yaw_deg_mod": 2.8397
+          }
+        ],
+        "ambiguous": [],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054447,
+              -0.10345
+            ],
+            "z_center_m": 0.016919,
+            "yaw_deg_mod": 2.8333
+          },
+          {
+            "xy_m": [
+              -0.007437,
+              -0.101236
+            ],
+            "z_center_m": 0.017099,
+            "yaw_deg_mod": 2.8333
+          },
+          {
+            "xy_m": [
+              0.038363,
+              -0.099504
+            ],
+            "z_center_m": 0.018609,
+            "yaw_deg_mod": 2.8333
+          }
+        ],
+        "ambiguous": [],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054717,
+              -0.103585
+            ],
+            "z_center_m": 0.016968,
+            "yaw_deg_mod": 2.9781
+          },
+          {
+            "xy_m": [
+              -0.007691,
+              -0.101185
+            ],
+            "z_center_m": 0.017469,
+            "yaw_deg_mod": 2.9781
+          },
+          {
+            "xy_m": [
+              0.037947,
+              -0.099282
+            ],
+            "z_center_m": 0.018284,
+            "yaw_deg_mod": 2.9781
+          }
+        ],
+        "ambiguous": [],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054838,
+              -0.103873
+            ],
+            "z_center_m": 0.016998,
+            "yaw_deg_mod": 9.8388
+          },
+          {
+            "xy_m": [
+              -0.007814,
+              -0.101065
+            ],
+            "z_center_m": 0.01713,
+            "yaw_deg_mod": 2.9031
+          },
+          {
+            "xy_m": [
+              0.037834,
+              -0.099552
+            ],
+            "z_center_m": 0.018528,
+            "yaw_deg_mod": 2.8741
+          }
+        ],
+        "ambiguous": [],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054693,
+              -0.103808
+            ],
+            "z_center_m": 0.017207,
+            "yaw_deg_mod": 13.8267
+          },
+          {
+            "xy_m": [
+              -0.007575,
+              -0.101125
+            ],
+            "z_center_m": 0.017373,
+            "yaw_deg_mod": 3.4014
+          },
+          {
+            "xy_m": [
+              0.038099,
+              -0.099703
+            ],
+            "z_center_m": 0.018636,
+            "yaw_deg_mod": 2.7291
+          }
+        ],
+        "ambiguous": [],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054695,
+              -0.103637
+            ],
+            "z_center_m": 0.017066,
+            "yaw_deg_mod": 11.6146
+          },
+          {
+            "xy_m": [
+              -0.007569,
+              -0.100915
+            ],
+            "z_center_m": 0.017859,
+            "yaw_deg_mod": 3.6365
+          },
+          {
+            "xy_m": [
+              0.038124,
+              -0.099467
+            ],
+            "z_center_m": 0.01869,
+            "yaw_deg_mod": 2.7946
+          }
+        ],
+        "ambiguous": [],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054747,
+              -0.103861
+            ],
+            "z_center_m": 0.017205,
+            "yaw_deg_mod": 8.5043
+          },
+          {
+            "xy_m": [
+              -0.007858,
+              -0.101125
+            ],
+            "z_center_m": 0.01686,
+            "yaw_deg_mod": 3.0626
+          },
+          {
+            "xy_m": [
+              0.037619,
+              -0.099093
+            ],
+            "z_center_m": 0.018656,
+            "yaw_deg_mod": 3.0626
+          }
+        ],
+        "ambiguous": [],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054708,
+              -0.103662
+            ],
+            "z_center_m": 0.016956,
+            "yaw_deg_mod": 13.3671
+          },
+          {
+            "xy_m": [
+              -0.007656,
+              -0.101304
+            ],
+            "z_center_m": 0.017402,
+            "yaw_deg_mod": 2.6456
+          },
+          {
+            "xy_m": [
+              0.037883,
+              -0.099629
+            ],
+            "z_center_m": 0.018443,
+            "yaw_deg_mod": 2.6456
+          }
+        ],
+        "ambiguous": [],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.05447,
+              -0.103427
+            ],
+            "z_center_m": 0.017023,
+            "yaw_deg_mod": 2.7893
+          },
+          {
+            "xy_m": [
+              -0.007703,
+              -0.101172
+            ],
+            "z_center_m": 0.017301,
+            "yaw_deg_mod": 2.7893
+          },
+          {
+            "xy_m": [
+              0.03762,
+              -0.099696
+            ],
+            "z_center_m": 0.018705,
+            "yaw_deg_mod": 2.7893
+          }
+        ],
+        "ambiguous": [],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054494,
+              -0.103557
+            ],
+            "z_center_m": 0.016936,
+            "yaw_deg_mod": 2.8039
+          },
+          {
+            "xy_m": [
+              -0.007472,
+              -0.101308
+            ],
+            "z_center_m": 0.016871,
+            "yaw_deg_mod": 2.8039
+          },
+          {
+            "xy_m": [
+              0.038133,
+              -0.099418
+            ],
+            "z_center_m": 0.01843,
+            "yaw_deg_mod": 2.8039
+          }
+        ],
+        "ambiguous": [],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054602,
+              -0.103317
+            ],
+            "z_center_m": 0.016914,
+            "yaw_deg_mod": 2.8686
+          },
+          {
+            "xy_m": [
+              -0.007554,
+              -0.10123
+            ],
+            "z_center_m": 0.016815,
+            "yaw_deg_mod": 2.8686
+          },
+          {
+            "xy_m": [
+              0.038026,
+              -0.099615
+            ],
+            "z_center_m": 0.018465,
+            "yaw_deg_mod": 2.8686
+          }
+        ],
+        "ambiguous": [],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv_rgb",
+          "split:mv_rgb",
+          "split:mv_rgb"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054655,
+              -0.103732
+            ],
+            "z_center_m": 0.016927,
+            "yaw_deg_mod": 11.7675
+          },
+          {
+            "xy_m": [
+              -0.007561,
+              -0.101443
+            ],
+            "z_center_m": 0.016913,
+            "yaw_deg_mod": 2.7428
+          },
+          {
+            "xy_m": [
+              0.037953,
+              -0.099646
+            ],
+            "z_center_m": 0.018448,
+            "yaw_deg_mod": 2.7428
+          }
+        ],
+        "ambiguous": [],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv+side",
+          "split:mv+side",
+          "split:mv+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054505,
+              -0.103601
+            ],
+            "z_center_m": 0.017153,
+            "yaw_deg_mod": 2.8259
+          },
+          {
+            "xy_m": [
+              -0.00763,
+              -0.101268
+            ],
+            "z_center_m": 0.01757,
+            "yaw_deg_mod": 2.8259
+          },
+          {
+            "xy_m": [
+              0.037762,
+              -0.099844
+            ],
+            "z_center_m": 0.018458,
+            "yaw_deg_mod": 2.8259
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv+side",
+          "split:mv+side",
+          "split:mv+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054713,
+              -0.103425
+            ],
+            "z_center_m": 0.017141,
+            "yaw_deg_mod": 2.714
+          },
+          {
+            "xy_m": [
+              -0.007727,
+              -0.101139
+            ],
+            "z_center_m": 0.017187,
+            "yaw_deg_mod": 2.714
+          },
+          {
+            "xy_m": [
+              0.037803,
+              -0.099711
+            ],
+            "z_center_m": 0.018678,
+            "yaw_deg_mod": 2.714
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv+side",
+          "split:mv+side",
+          "split:mv+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054868,
+              -0.103436
+            ],
+            "z_center_m": 0.01719,
+            "yaw_deg_mod": 2.8628
+          },
+          {
+            "xy_m": [
+              -0.007751,
+              -0.101223
+            ],
+            "z_center_m": 0.017018,
+            "yaw_deg_mod": 5.2462
+          },
+          {
+            "xy_m": [
+              0.037837,
+              -0.099167
+            ],
+            "z_center_m": 0.018539,
+            "yaw_deg_mod": 2.8628
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv+side",
+          "split:mv+side",
+          "split:mv+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.055069,
+              -0.103723
+            ],
+            "z_center_m": 0.016934,
+            "yaw_deg_mod": 9.5434
+          },
+          {
+            "xy_m": [
+              -0.007664,
+              -0.101344
+            ],
+            "z_center_m": 0.016998,
+            "yaw_deg_mod": 2.845
+          },
+          {
+            "xy_m": [
+              0.038154,
+              -0.099171
+            ],
+            "z_center_m": 0.018535,
+            "yaw_deg_mod": 2.845
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv+side",
+          "split:mv+side",
+          "split:mv+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054602,
+              -0.103552
+            ],
+            "z_center_m": 0.016939,
+            "yaw_deg_mod": 2.7793
+          },
+          {
+            "xy_m": [
+              -0.007602,
+              -0.101115
+            ],
+            "z_center_m": 0.017348,
+            "yaw_deg_mod": 2.7793
+          },
+          {
+            "xy_m": [
+              0.038027,
+              -0.099808
+            ],
+            "z_center_m": 0.01844,
+            "yaw_deg_mod": 2.7793
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:mv+side",
+          "split:mv+side",
+          "split:mv+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054913,
+              -0.103674
+            ],
+            "z_center_m": 0.017082,
+            "yaw_deg_mod": 6.2911
+          },
+          {
+            "xy_m": [
+              -0.007989,
+              -0.101131
+            ],
+            "z_center_m": 0.016823,
+            "yaw_deg_mod": 2.7803
+          },
+          {
+            "xy_m": [
+              0.037521,
+              -0.099497
+            ],
+            "z_center_m": 0.018525,
+            "yaw_deg_mod": 2.7803
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      }
+    ],
+    "merged_corroborated": [
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -0.00887,
+              -0.10068
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -0.00905,
+              -0.10067
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -0.00874,
+              -0.10077
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -0.00882,
+              -0.1008
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -0.00903,
+              -0.10072
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -0.00904,
+              -0.10078
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -0.00897,
+              -0.10068
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -0.00884,
+              -0.10061
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -0.00918,
+              -0.10068
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -0.00879,
+              -0.10073
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -0.00878,
+              -0.10067
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -0.00863,
+              -0.1008
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -0.00873,
+              -0.10066
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "wrist_only",
+        "n_out": 0,
+        "n_amb": 1,
+        "pose_sources": [],
+        "poses": [],
+        "ambiguous": [
+          {
+            "xy_m": [
+              -0.0088,
+              -0.10083
+            ],
+            "n_est": 4,
+            "reason": "uncorroborated_coplanar_rgb_only"
+          }
+        ],
+        "slots": []
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb+side",
+          "split:rgb+side",
+          "split:rgb+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054505,
+              -0.103601
+            ],
+            "z_center_m": 0.017153,
+            "yaw_deg_mod": 2.8259
+          },
+          {
+            "xy_m": [
+              -0.00763,
+              -0.101268
+            ],
+            "z_center_m": 0.01757,
+            "yaw_deg_mod": 2.8259
+          },
+          {
+            "xy_m": [
+              0.037762,
+              -0.099844
+            ],
+            "z_center_m": 0.018458,
+            "yaw_deg_mod": 2.8259
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb+side",
+          "split:rgb+side",
+          "split:rgb+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054713,
+              -0.103425
+            ],
+            "z_center_m": 0.017141,
+            "yaw_deg_mod": 2.714
+          },
+          {
+            "xy_m": [
+              -0.007727,
+              -0.101139
+            ],
+            "z_center_m": 0.017187,
+            "yaw_deg_mod": 2.714
+          },
+          {
+            "xy_m": [
+              0.037803,
+              -0.099711
+            ],
+            "z_center_m": 0.018678,
+            "yaw_deg_mod": 2.714
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb+side",
+          "split:rgb+side",
+          "split:rgb+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054868,
+              -0.103436
+            ],
+            "z_center_m": 0.01719,
+            "yaw_deg_mod": 2.8628
+          },
+          {
+            "xy_m": [
+              -0.007751,
+              -0.101223
+            ],
+            "z_center_m": 0.017018,
+            "yaw_deg_mod": 5.2462
+          },
+          {
+            "xy_m": [
+              0.037837,
+              -0.099167
+            ],
+            "z_center_m": 0.018539,
+            "yaw_deg_mod": 2.8628
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb+side",
+          "split:rgb+side",
+          "split:rgb+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.055069,
+              -0.103723
+            ],
+            "z_center_m": 0.016934,
+            "yaw_deg_mod": 9.5434
+          },
+          {
+            "xy_m": [
+              -0.007664,
+              -0.101344
+            ],
+            "z_center_m": 0.016998,
+            "yaw_deg_mod": 2.845
+          },
+          {
+            "xy_m": [
+              0.038154,
+              -0.099171
+            ],
+            "z_center_m": 0.018535,
+            "yaw_deg_mod": 2.845
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb+side",
+          "split:rgb+side",
+          "split:rgb+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054602,
+              -0.103552
+            ],
+            "z_center_m": 0.016939,
+            "yaw_deg_mod": 2.7793
+          },
+          {
+            "xy_m": [
+              -0.007602,
+              -0.101115
+            ],
+            "z_center_m": 0.017348,
+            "yaw_deg_mod": 2.7793
+          },
+          {
+            "xy_m": [
+              0.038027,
+              -0.099808
+            ],
+            "z_center_m": 0.01844,
+            "yaw_deg_mod": 2.7793
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      },
+      {
+        "status": "ok",
+        "fallback_mode": "dual_view",
+        "n_out": 3,
+        "n_amb": 0,
+        "pose_sources": [
+          "split:rgb+side",
+          "split:rgb+side",
+          "split:rgb+side"
+        ],
+        "poses": [
+          {
+            "xy_m": [
+              -0.054913,
+              -0.103674
+            ],
+            "z_center_m": 0.017082,
+            "yaw_deg_mod": 6.2911
+          },
+          {
+            "xy_m": [
+              -0.007989,
+              -0.101131
+            ],
+            "z_center_m": 0.016823,
+            "yaw_deg_mod": 2.7803
+          },
+          {
+            "xy_m": [
+              0.037521,
+              -0.099497
+            ],
+            "z_center_m": 0.018525,
+            "yaw_deg_mod": 2.7803
+          }
+        ],
+        "ambiguous": [],
+        "slots": [
+          {
+            "layer": 1,
+            "slot": -1,
+            "state": "DISPLACED"
+          },
+          {
+            "layer": 1,
+            "slot": 0,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 1,
+            "slot": 1,
+            "state": "OCCUPIED"
+          },
+          {
+            "layer": 2,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 2,
+            "slot": 0,
+            "state": "UNKNOWN"
+          },
+          {
+            "layer": 2,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": -1,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 0,
+            "state": "OBSERVED_EMPTY"
+          },
+          {
+            "layer": 3,
+            "slot": 1,
+            "state": "OBSERVED_EMPTY"
+          }
+        ]
+      }
+    ]
+  }
+}
