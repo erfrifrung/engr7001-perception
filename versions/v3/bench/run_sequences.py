@@ -28,6 +28,10 @@ from wp3_live import ViewInput, preset_config, run_perception_epoch  # noqa: E40
 from wp3_live.contract import build_atomic_scene_payload  # noqa: E402
 from wp3_live.dwell_gate import DwellStatus  # noqa: E402
 from wp3_live.fusion_tracker import WP3TemporalTracker  # noqa: E402
+try:                                    # V3.2 trees only (--root may point at an older tree)
+    from wp3_live.fusion_tracker import tracker_from_config  # noqa: E402
+except ImportError:
+    tracker_from_config = None
 from wp3_live.geometry_cache import CameraModelCache  # noqa: E402
 from wp3_live.temporal_cache import EpochTemporalCache  # noqa: E402
 
@@ -52,6 +56,10 @@ def make():
     kw = {}
     if v3 and "v2tracker" not in m:
         kw = dict(persistent_joint_occlusion=True, reanchor_after=2)
+    if "v32" in m:                       # V3.2 tracker: duplicate merge + observed-free retirement (config defaults)
+        if tracker_from_config is None:
+            raise SystemExit(f"method {m} needs a V3.2 tree (--root)")
+        return cfg, tracker_from_config(cfg)
     tr = WP3TemporalTracker(cfg.block, cfg.thresholds, **kw)
     return cfg, tr
 
@@ -90,8 +98,9 @@ for seq, frames in meta.items():
         # clock makes the V2 tracker reset as if the bag had been seeked)
         now_s = max(last_now + 1e-6, st * 1e-9 + proc_ms / 1000.0)
         last_now = now_s
+        fs_kw = {"free_space": ep.free_space} if getattr(tracker, "retire_on_observed_free", False) else {}
         tracks = tracker.update(ep.poses, ep.pose_sources, ep.stamp_ns, now_s, side_fresh_global=True,
-                                pose_side_visible=ep.pose_side_visible)
+                                pose_side_visible=ep.pose_side_visible, **fs_kw)
         payload = build_atomic_scene_payload(ep, tracks, cfg, epoch_id=k + 1, publish_stamp_ns=int(now_s * 1e9),
                                              code_hash="bench")
         json.dumps(payload)  # contract must stay JSON-serialisable

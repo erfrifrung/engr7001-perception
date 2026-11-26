@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 import hashlib
+from typing import Any
+
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
@@ -124,15 +126,40 @@ class TrackedBlock:
     ambiguous_peer_ids: tuple[int, ...] = ()
     stable_count: int = 0                # V3: consecutive fresh, unambiguous, consistent observations
     stable_ref_xy_m: tuple[float, float] | None = None  # V3.1: pose where the current stable run started
+    free_count: int = 0                  # V3.2: consecutive epochs whose heightmap showed this footprint empty
+
+
+def tracker_from_config(cfg: Any) -> "WP3TemporalTracker":
+    """The one place that maps RuntimeConfig onto tracker options (live node, bag replay, benches)."""
+    return WP3TemporalTracker(
+        cfg.block,
+        cfg.thresholds,
+        persistent_joint_occlusion=cfg.persistent_joint_occlusion,
+        reanchor_after=cfg.reanchor_after,
+        merge_overlapping=getattr(cfg, "tracker_merge_overlapping", False),
+        retire_on_observed_free=getattr(cfg, "retire_on_observed_free", False),
+        hidden_retire_max_s=getattr(cfg, "hidden_retire_max_s", 60.0),
+        free_confirm_frames=getattr(cfg, "free_confirm_frames", 3),
+    )
 
 
 class WP3TemporalTracker:
     """Identity-preserving tracker with F38 MDS confirmation, 1.8 s hold, and target-level shift check."""
 
     def __init__(self, block: BlockSpec, th: PolicyThresholds, *, persistent_joint_occlusion: bool = False,
-                 reanchor_after: int = 0) -> None:
+                 reanchor_after: int = 0, merge_overlapping: bool = False, retire_on_observed_free: bool = False,
+                 hidden_retire_max_s: float = 60.0, free_confirm_frames: int = 3) -> None:
         self.block = block
         self.th = th
+        # V3.2: merge tracks that cannot be two physical blocks (see _merge_physically_overlapping). False = V3.1.
+        self.merge_overlapping = bool(merge_overlapping)
+        self.merged_total = 0
+        # V3.2 (fault #12): an undetected block stays an obstacle until free_confirm_frames consecutive epochs show
+        # its footprint empty (FreeSpaceMap), or it has been unseen for hidden_retire_max_s. False = V3.1 (retire_s).
+        self.retire_on_observed_free = bool(retire_on_observed_free)
+        self.hidden_retire_max_s = float(hidden_retire_max_s)
+        self.free_confirm_frames = max(1, int(free_confirm_frames))
+        self.retired_free_total = 0
         self._tracks: dict[int, TrackedBlock] = {}
         self._next_id: int = 1
         self._last_now_s: float = -np.inf
@@ -160,8 +187,13 @@ class WP3TemporalTracker:
         side_fresh_global: bool = False,
         pose_side_visible: list[bool] | None = None,
         target_shift_gate_m: float = 0.008,
+        free_space: Any = None,
     ) -> list[TrackedBlock]:
-        """Update tracks; expiry/retirement NEVER infer OBSERVED_EMPTY."""
+        """Update tracks; expiry/retirement NEVER infer OBSERVED_EMPTY.
+
+        V3.2: with retire_on_observed_free, ``free_space`` (a FreeSpaceMap from this epoch, or None when the epoch
+        produced no usable heightmap) is the only way an undetected track is removed before hidden_retire_max_s.
+        """
         if not np.isfinite(now_s):
             raise ValueError("Tracker clock must be finite")
         if now_s < self._last_now_s:
@@ -169,9 +201,10 @@ class WP3TemporalTracker:
             self.reset()
         self._last_now_s = now_s
 
+        max_unseen_s = self.hidden_retire_max_s if self.retire_on_observed_free else self.th.retire_s
         active_ids = [
             tid for tid, tr in self._tracks.items()
-            if (now_s - tr.last_seen_s) <= self.th.retire_s
+            if (now_s - tr.last_seen_s) <= max_unseen_s
         ]
         # Drop permanently retired IDs (never reuse ID!)
         self._tracks = {tid: self._tracks[tid] for tid in active_ids}
@@ -312,10 +345,15 @@ class WP3TemporalTracker:
                     state = "OCCLUDED"
                 else:
                     state = "STALE"
+                free_count = 0
+                if self.retire_on_observed_free and free_space is not None and free_space.footprint_free(
+                        tr.fit.xy_m, tr.fit.yaw_rad, tr.fit.z_top_m, self.block):
+                    free_count = tr.free_count + 1
                 self._tracks[tid] = replace(
                     tr,
                     state=state,
                     mds_score=mds,
+                    free_count=free_count,
                     # Critically preserve unmodified tr.observation_stamp_ns!
                     target_side_fresh=False,
                     snapshot_commit_eligible=False,
@@ -349,4 +387,71 @@ class WP3TemporalTracker:
                 ambiguous_peer_ids=(),
             )
 
+        if self.merge_overlapping:
+            self._merge_physically_overlapping()
+        if self.retire_on_observed_free:
+            for tid in [t for t, tr in self._tracks.items() if tr.free_count >= self.free_confirm_frames]:
+                del self._tracks[tid]
+                self.retired_free_total += 1
         return [self._tracks[k] for k in sorted(self._tracks)]
+
+    # ------------------------------------------------------------------------------------------------- V3.2
+    def _same_layer(self, a: TrackedBlock, b: TrackedBlock) -> bool:
+        dz = abs(float(a.fit.z_top_m) - float(b.fit.z_top_m))
+        # unknown height: never merge (a lost obstacle is worse than a duplicate one)
+        return bool(np.isfinite(dz)) and dz <= 0.6 * float(self.block.height_m)
+
+    def _merge_physically_overlapping(self) -> None:
+        """V3.2: two tracks on the same layer closer than 0.4 x block width are ONE physical block.
+
+        Two real blocks on one layer cannot be closer than the block width (their inscribed circles would overlap),
+        so such a pair is a duplicate created by a missed association (yaw or height gate, or the near-tie veto). Left
+        alone, the duplicate pair re-triggers the near-tie veto on every later frame, every detection at that spot
+        stays unmatched and spawns another track: the 26 Nov live soak produced 3203 ids for 3 objects this way.
+        The older id survives with the most recent observation; the merged track must re-confirm before it is
+        commit-eligible again.
+        """
+        r_merge = 0.4 * float(self.block.minor_m)
+        while True:
+            ids = sorted(self._tracks)
+            best = None
+            for i, a_id in enumerate(ids):
+                a = self._tracks[a_id]
+                for b_id in ids[i + 1:]:
+                    b = self._tracks[b_id]
+                    d = float(np.hypot(a.fit.xy_m[0] - b.fit.xy_m[0], a.fit.xy_m[1] - b.fit.xy_m[1]))
+                    if d <= r_merge and self._same_layer(a, b) and (best is None or d < best[0]):
+                        best = (d, a_id, b_id)
+            if best is None:
+                return
+            _, keep_id, drop_id = best
+            keep, drop = self._tracks[keep_id], self._tracks.pop(drop_id)
+            newest = drop if drop.last_seen_s > keep.last_seen_s else keep
+            peers = (set(keep.ambiguous_peer_ids) | set(drop.ambiguous_peer_ids)) - {keep_id, drop_id}
+            self._tracks[keep_id] = replace(
+                keep,
+                fit=newest.fit,
+                source=newest.source,
+                state=newest.state,
+                mds_score=min(keep.mds_score, drop.mds_score),
+                confirmed=bool(keep.confirmed and drop.confirmed),
+                observation_stamp_ns=max(keep.observation_stamp_ns, drop.observation_stamp_ns),
+                last_seen_s=max(keep.last_seen_s, drop.last_seen_s),
+                target_side_fresh=newest.target_side_fresh,
+                snapshot_commit_eligible=False,
+                identity_ambiguous=bool(keep.identity_ambiguous or drop.identity_ambiguous or peers),
+                ambiguous_peer_ids=tuple(sorted(peers)),
+                stable_count=0,
+                stable_ref_xy_m=None,
+                free_count=0,
+            )
+            for book in (self._co_hidden, self._unverified):
+                moved = book.pop(drop_id, set())
+                if moved:
+                    book.setdefault(keep_id, set()).update(moved - {keep_id})
+                for tid, s in book.items():
+                    if drop_id in s:
+                        s.discard(drop_id)
+                        if tid != keep_id:
+                            s.add(keep_id)
+            self.merged_total += 1

@@ -49,7 +49,8 @@ from wp3_live import (  # noqa: E402
 )
 from wp3_live.contract import build_atomic_scene_payload  # noqa: E402
 from wp3_live.dwell_gate import WristDwellGate  # noqa: E402
-from wp3_live.fusion_tracker import StreamWatchdog, WP3TemporalTracker  # noqa: E402
+from wp3_live.calib_check import CalibrationMonitor, transform_delta  # noqa: E402
+from wp3_live.fusion_tracker import StreamWatchdog, tracker_from_config  # noqa: E402
 from wp3_live.geometry_cache import CameraModelCache, StaticTFCache  # noqa: E402
 from wp3_live.gpu_mask_worker import AsyncMaskWorker, SAM2MaskChallenger  # noqa: E402
 from wp3_live.io_worker import AsyncIOArtifactWriter  # noqa: E402
@@ -108,6 +109,11 @@ class WP3LivePerceptionNode(Node):
         self.declare_parameter("reanchor_after", 2)
         # Robot TF must be within this of the camera frame stamp to be used (never unbounded "latest").
         self.declare_parameter("robot_tf_max_age_s", 0.050)
+        # V3.2 (fault #10): re-read fixed camera transforms this often; a changed /tf_static starts a new
+        # calibration epoch (tracks from the old calibration are dropped). <= 0 = V3.1 (cached for the node lifetime).
+        self.declare_parameter("static_tf_refresh_s", 1.0)
+        # V3.2: per-camera table-plane check against the calibration; a camera in "mismatch" is not fused.
+        self.declare_parameter("calibration_check", True)
 
         cfg_path = str(self.get_parameter("config").value)
         self.policy = str(self.get_parameter("policy").value)
@@ -143,7 +149,13 @@ class WP3LivePerceptionNode(Node):
         if v3_budget > 0.0:
             overrides["v3_frame_budget_ms"] = v3_budget
         self.robot_tf_max_age_s = max(0.0, float(self.get_parameter("robot_tf_max_age_s").value))
+        refresh = float(self.get_parameter("static_tf_refresh_s").value)
+        self.static_tf_refresh_s = refresh if refresh > 0.0 else None
+        self.calibration_check = bool(self.get_parameter("calibration_check").value)
+        self.calib_monitor = CalibrationMonitor()
         self.cfg = load_runtime_config(cfg_path, overrides=overrides)
+        self._calib_base = self.cfg.calib_epoch
+        self._calib_rev = 0
         self.code_hash = _package_code_hash()
         if use_gpu_worker:
             ch = SAM2MaskChallenger(sam2_weights or None)
@@ -165,16 +177,14 @@ class WP3LivePerceptionNode(Node):
             max_age_s=self.cfg.thresholds.max_age_s,
             freeze_timeout_s=self.cfg.thresholds.freeze_timeout_s,
         )
-        self.tracker = WP3TemporalTracker(
-            self.cfg.block,
-            self.cfg.thresholds,
-            persistent_joint_occlusion=self.cfg.persistent_joint_occlusion,
-            reanchor_after=self.cfg.reanchor_after,
-        )
+        self.tracker = tracker_from_config(self.cfg)
         self.get_logger().info(
             f"config: enable_v3_regions={self.cfg.enable_v3_regions} v3_solver={self.cfg.v3_solver} "
             f"v3_frame_budget_ms={self.cfg.v3_frame_budget_ms} persistent_joint_occlusion={self.cfg.persistent_joint_occlusion} "
             f"reanchor_after={self.cfg.reanchor_after} enable_temporal_skip={self.cfg.enable_temporal_skip} "
+            f"tracker_merge_overlapping={self.cfg.tracker_merge_overlapping} "
+            f"static_tf_refresh_s={self.static_tf_refresh_s} calibration_check={self.calibration_check} "
+            f"retire_on_observed_free={self.cfg.retire_on_observed_free} hidden_retire_max_s={self.cfg.hidden_retire_max_s} "
             f"require_fk_for_moving_wrist={self.cfg.require_fk_for_moving_wrist} code_hash={self.code_hash}"
         )
         self.tf_buffer = Buffer()
@@ -258,8 +268,10 @@ class WP3LivePerceptionNode(Node):
         self.dwell_gate.push_imu_gyro(s if s > 0 else self._now_s(), np.array([av.x, av.y, av.z], dtype=np.float64))
 
     def _lookup_mat(self, target: str, source: str, stamp=None, static: bool = False, timeout_s: float = 0.0) -> np.ndarray | None:
+        now_s = self._now_s()
         if static:
-            cached = self.tf_cache.get(self.cfg.calib_epoch, target, source)
+            cached = self.tf_cache.get(self.cfg.calib_epoch, target, source, now_s=now_s,
+                                       max_age_s=self.static_tf_refresh_s)
             if cached is not None:
                 return cached
         try:
@@ -269,10 +281,27 @@ class WP3LivePerceptionNode(Node):
             T[:3, :3] = Rotation.from_quat([tr.rotation.x, tr.rotation.y, tr.rotation.z, tr.rotation.w]).as_matrix()
             T[:3, 3] = [tr.translation.x, tr.translation.y, tr.translation.z]
             if static:
-                self.tf_cache.put(self.cfg.calib_epoch, target, source, T)
+                prev = self.tf_cache.previous(target, source)
+                if prev is not None:
+                    dt_mm, dr_deg = transform_delta(prev, T)
+                    if dt_mm > 1.0 or dr_deg > 0.1:
+                        self._on_calibration_change(source, dt_mm, dr_deg)
+                self.tf_cache.put(self.cfg.calib_epoch, target, source, T, now_s=now_s)
             return T
         except Exception:
             return None
+
+    def _on_calibration_change(self, frame: str, dt_mm: float, dr_deg: float) -> None:
+        """V3.2: /tf_static changed under a running node: new calibration epoch, drop every track from the old one
+        (their poses were computed in the old geometry). Consumers see the new calibration_epoch string."""
+        self._calib_rev += 1
+        self.cfg.calib_epoch = f"{self._calib_base}#r{self._calib_rev}"
+        self.tracker.reset()
+        self.calib_monitor.reset()
+        self.get_logger().warning(
+            f"calibration changed: {frame} moved {dt_mm:.1f} mm / {dr_deg:.2f} deg in /tf_static -> "
+            f"calibration_epoch={self.cfg.calib_epoch}; all tracks dropped and re-detected"
+        )
 
     def _lookup_tf_stamped(self, target: str, source: str, q_time: Time, timeout_s: float):
         """(4x4, header stamp ns) or (None, None). Never raises."""
@@ -475,6 +504,23 @@ class WP3LivePerceptionNode(Node):
             if self.cfg.enable_robot_self_filter
             else None
         )
+        # V3.2 (fault #10): a camera whose depth image disagrees with its calibration is not fused.
+        calib_rejected: list[str] = []
+        if self.calibration_check:
+            views = {"wrist": wrist_vi, "side": side_vi, "third": third_vi}
+            ref = (0.5 * (self.cfg.roi_xyz_min[0] + self.cfg.roi_xyz_max[0]),
+                   0.5 * (self.cfg.roi_xyz_min[1] + self.cfg.roi_xyz_max[1]), 0.0)   # workspace centre on the table
+            for role, vi in views.items():
+                if vi is None or role not in cam_health:
+                    continue
+                st = self.calib_monitor.observe(role, now_s, vi.depth_raw, vi.cam.rays_f32, vi.cam.depth_scale_m,
+                                                vi.T_table_cam, ref_xyz_table=ref)
+                cam_health[role]["calibration"] = self.calib_monitor.diagnostics(role)
+                if st == "mismatch":
+                    calib_rejected.append(role)
+            wrist_vi = None if "wrist" in calib_rejected else wrist_vi
+            side_vi = None if "side" in calib_rejected else side_vi
+            third_vi = None if "third" in calib_rejected else third_vi
         epoch = run_perception_epoch(
             wrist=wrist_vi,
             side=side_vi,
@@ -487,6 +533,10 @@ class WP3LivePerceptionNode(Node):
             temporal_cache=self.temporal_cache,
             third=third_vi,
         )
+        if calib_rejected:
+            epoch.evidence_log["calibration_rejected"] = list(calib_rejected)
+            if epoch.status == "no_valid_stream":
+                epoch.status = "calibration_mismatch"      # never "ok": the bridge keeps obstacles, WP5 no targets
         if self._mask_worker is not None and wrist_vi is not None and epoch.ambiguous_clusters:
             bbox = tuple(epoch.evidence_log.get("bbox_2d", (0, 0, wrist_vi.cam.width, wrist_vi.cam.height)))
             if len(bbox) == 4 and (bbox[2] - bbox[0]) >= 16 and (bbox[3] - bbox[1]) >= 16:
@@ -500,6 +550,7 @@ class WP3LivePerceptionNode(Node):
             now_s,
             side_fresh_global=side_fresh_ok,
             pose_side_visible=epoch.pose_side_visible,
+            free_space=epoch.free_space,
         )
 
         if self.third_ns:

@@ -126,20 +126,33 @@ class StaticTFCache:
     def __init__(self) -> None:
         self._epoch: str | None = None
         self._mats: dict[tuple[str, str], np.ndarray] = {}
+        self._put_s: dict[tuple[str, str], float] = {}
 
     def set_epoch(self, epoch: str) -> None:
         if epoch != self._epoch:
             self._epoch = epoch
             self._mats.clear()
+            self._put_s.clear()
 
-    def get(self, epoch: str, parent: str, child: str) -> np.ndarray | None:
+    def get(self, epoch: str, parent: str, child: str, now_s: float | None = None,
+            max_age_s: float | None = None) -> np.ndarray | None:
+        """Cached transform. V3.2: with now_s and max_age_s, an entry older than max_age_s is reported as missing,
+        so the caller re-reads /tf_static and a recalibration is noticed without restarting the node."""
         self.set_epoch(epoch)
+        key = (parent, child)
+        if now_s is not None and max_age_s is not None and (now_s - self._put_s.get(key, -np.inf)) > max_age_s:
+            return None
+        return self._mats.get(key)
+
+    def previous(self, parent: str, child: str) -> np.ndarray | None:
+        """The last transform stored under the current epoch, whatever its age (for change detection)."""
         return self._mats.get((parent, child))
 
-    def put(self, epoch: str, parent: str, child: str, mat: np.ndarray) -> np.ndarray:
+    def put(self, epoch: str, parent: str, child: str, mat: np.ndarray, now_s: float | None = None) -> np.ndarray:
         self.set_epoch(epoch)
         m = np.asarray(mat, dtype=np.float64).reshape(4, 4)
         self._mats[(parent, child)] = m
+        self._put_s[(parent, child)] = float(now_s) if now_s is not None else np.inf
         return m
 
 

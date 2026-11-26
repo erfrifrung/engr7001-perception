@@ -24,6 +24,7 @@ from .geometry_cache import (
     project_workspace_roi_2d,
 )
 from .heightmap_core import HeightmapGrid, build_heightmap_fast, extract_height_band_components
+from .free_space import FreeSpaceMap
 from .proposals import (
     BlockFit,
     ImageProjectionContext,
@@ -115,6 +116,7 @@ class EpochResult:
     third_img_ctx: ImageProjectionContext | None = None
     hm_grid: HeightmapGrid | None = None
     label_map: np.ndarray | None = None
+    free_space: FreeSpaceMap | None = None   # V3.2: observed heightmap, the tracker's only evidence for "removed"
 
 
 def _select_primary_and_side(
@@ -1013,6 +1015,7 @@ def run_perception_epoch(
         third_img_ctx=third_data.img_ctx if third_data is not None else None,
         hm_grid=grid,
         label_map=label_map,
+        free_space=FreeSpaceMap(grid=grid, h_max=hm.h_max, stamp_ns=primary.stamp_ns),
     )
     if temporal_cache is not None:
         if verifier_stats.get("vetoed", 0) > 0:

@@ -33,7 +33,7 @@ from wp3_live import (  # noqa: E402
 )
 from wp3_live.bag_reader import chain_tf, load_bag_fast  # noqa: E402
 from wp3_live.dwell_gate import WristDwellGate  # noqa: E402
-from wp3_live.fusion_tracker import WP3TemporalTracker  # noqa: E402
+from wp3_live.fusion_tracker import tracker_from_config  # noqa: E402
 from wp3_live.geometry_cache import CameraModelCache  # noqa: E402
 from wp3_live.overlay import render_overlay  # noqa: E402
 from wp3_live.scoring import aggregate_method_summary, load_ground_truth_labels, score_epoch_against_labels  # noqa: E402
@@ -557,9 +557,7 @@ def main(argv=None) -> None:
     run_cfg = replace(cfg, enable_temporal_skip=(args.temporal_skip == "on"))
 
     def _run_sweep_variant(run_key: str, vmode: str, pol: str, use_cfg, synth_dwell_if_missing: bool = False) -> None:
-        tracker = WP3TemporalTracker(use_cfg.block, use_cfg.thresholds,
-                                     persistent_joint_occlusion=use_cfg.persistent_joint_occlusion,
-                                     reanchor_after=use_cfg.reanchor_after)
+        tracker = tracker_from_config(use_cfg)
         tcache = EpochTemporalCache()
         dwell_fallback = WristDwellGate(require_fk=False) if synth_dwell_if_missing else None
         recs: list[dict[str, Any]] = []
@@ -605,6 +603,7 @@ def main(argv=None) -> None:
                 tracks = tracker.update(
                     res.poses, res.pose_sources, res.stamp_ns, ep["t_rel_s"],
                     side_fresh_global=side_fresh, pose_side_visible=res.pose_side_visible,
+                    free_space=res.free_space,
                 )
                 sc = score_epoch_against_labels(ep["t_rel_s"], res, labels, sym_deg) if labels else None
 

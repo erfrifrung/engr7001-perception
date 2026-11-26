@@ -23,22 +23,23 @@ Schema `wp3_scene_observation_v2.1` is frozen by this document. Everything under
 | `frame_id` | str | `"jenga_table"` | all |
 | `observation_stamp_ns` | int | Camera exposure stamp of the primary view | WP5 (age) |
 | `publish_stamp_ns` | int | Taken **after** compute (V3.1); `publish − observation` = processing delay | WP2/WP5 diagnostics |
-| `status` | str | `ok` or one of `uncalibrated`, `no_valid_stream`, `no_plane`, `camera_moved`, `roi_empty`. **Only `ok` carries usable geometry.** A non-`ok` message is not evidence that blocks left. | WP2 bridge, WP5 |
+| `status` | str | `ok` or one of `uncalibrated`, `calibration_mismatch` (V3.2: every available camera failed its table-plane check), `no_valid_stream`, `no_plane`, `camera_moved`, `roi_empty`. **Only `ok` carries usable geometry.** A non-`ok` message is not evidence that blocks left. | WP2 bridge, WP5 |
 | `fallback_mode` | str | `dual_view`, `wrist_only`, `side_only`, `wrist_unqualified`, `no_valid_stream` | WP5 (confidence), logs |
-| `calibration_epoch` | str | ID of the calibration in use. A change invalidates old poses. | WP2, WP5 |
+| `calibration_epoch` | str | ID of the calibration in use. A change invalidates old poses. V3.2: when `/tf_static` changes under a running node the epoch gains a `#rN` suffix and every track is re-detected (new ids). | WP2, WP5 |
 | `config_hash`, `code_hash` | str | Provenance (code hash covers the node and all `wp3_live` modules) | logs |
 | `dwell` | obj | `stationary`, `fk_qualified`, `imu_corroborated`, `reason` | WP5 |
 | `tracks` | list | Every live track (see 3), including held ones | WP2, WP5 |
 | `ambiguous_clusters` | list | Occupied regions WP3 will not split into blocks (see 4) | WP2 display, WP5 keep-out |
 | `slot_occupancies` | list | Tower slot states | WP5, twin |
-| `stage_timings_ms`, `evidence`, `camera_health` | obj | Diagnostics, not contract | logs |
+| `stage_timings_ms`, `evidence`, `camera_health` | obj | Diagnostics, not contract. V3.2: `camera_health.<role>.calibration` = `{status: ok \| mismatch \| unverified, last_check: {plane_angle_deg, plane_offset_mm, …}}`; a `mismatch` camera was not fused | logs |
 
 ## 3. Tracks
 
 | Field | Meaning |
 |---|---|
 | `track_id` (int), `block_id` (`B07`) | Identity. Never reused. |
-| `state` | `MEASURED` (seen now), `DISPLACED` (seen now, moved ≥ 8 mm from anchor), `OCCLUDED` (not seen, held ≤ 1.8 s), `STALE` (not seen, held until retirement at 3.0 s). A track absent from the message has been **retired**. |
+| `state` | `MEASURED` (seen now), `DISPLACED` (seen now, moved ≥ 8 mm from anchor), `OCCLUDED` (not seen, held ≤ 1.8 s), `STALE` (not seen, held). A track absent from the message has been **retired**. V3.1: retired 3.0 s after it was last seen. **V3.2:** retired only when 3 consecutive epochs show its footprint empty (depth observed, clearly below its top), or after 60 s unseen; a block hidden under the arm or inside an ambiguous region stays `STALE`. |
+| (V3.2) duplicates | Two tracks on one layer closer than 0.4 × block width cannot be two blocks: they are merged into the older id, which must re-confirm before it is `snapshot_commit_eligible` again. |
 | `pose_table_m` | `[x, y, z_centre]` in `jenga_table`, metres |
 | `yaw_rad` | Rotation about +z of `jenga_table` of the **`dims_mm[0]` axis**. For blocks `dims_mm[0]` is the long side. 180° symmetric (`yaw_symmetry_deg`). |
 | `dims_mm` | `[along yaw, across yaw]`, mm. Measured when both opposite edges are visible, otherwise nominal 75 × 25. |

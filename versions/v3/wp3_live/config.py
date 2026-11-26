@@ -163,6 +163,12 @@ class RuntimeConfig:
     # tracks re-anchor after N consistent fresh observations. Passed to WP3TemporalTracker by the live node and replay.
     persistent_joint_occlusion: bool = True
     reanchor_after: int = 2
+    # V3.2 tracker: merge physically impossible duplicate tracks (26 Nov soak: 3203 ids for 3 objects), and keep an
+    # undetected block as an obstacle until its footprint is SEEN empty (fault #12), capped at hidden_retire_max_s.
+    tracker_merge_overlapping: bool = True
+    retire_on_observed_free: bool = True
+    hidden_retire_max_s: float = 60.0
+    free_confirm_frames: int = 3
     # V3 region stage (results/V3_RESEARCH.md D1-D3). Off -> exact tuned-V2 behaviour.
     # V3.1: OFF by default. Live M1 runs the V2 path; enable explicitly (JSON key or ROS parameter) to evaluate V3.
     enable_v3_regions: bool = False
@@ -258,6 +264,7 @@ def _merge_dataclass(instance: Any, patch: dict[str, Any]) -> Any:
 _V3_JSON_KEYS = (
     "mask_grouping", "mask_suppress_merged", "top_band_from_upper_cells", "enable_occlusion_truncated_partition",
     "persistent_joint_occlusion", "reanchor_after",
+    "tracker_merge_overlapping", "retire_on_observed_free", "hidden_retire_max_s", "free_confirm_frames",
     "enable_v3_regions", "v3_solver", "v3_view_carving", "v3_publish_unexplained", "v3_robot_unknown",
     "v3_region_budget_ms", "v3_frame_budget_ms", "v3_max_nodes", "v3_region_cache", "v3_slab_guard",
     "v3_mask_seam_cue", "v3_fast_deproject",

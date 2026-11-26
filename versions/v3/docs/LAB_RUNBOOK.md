@@ -34,12 +34,19 @@ Pre-checks (see `THURSDAY_PREDICTIONS.md` section 0):
 
 ## 2. Calibration (task 3332) and table → robot (task 3331)
 
+**Every session starts with a drift check** (V3.2; on 26 Nov every camera had moved 99–274 mm since the published calibration and nothing noticed):
+
 ```bash
 source scripts/lab_env.sh
 cal="$HOME/wp3_board_$(date +%Y%m%d_%H%M%S)"
 python3 scripts/register_board.py "$cal" <orientation_reference.json> --pitch-mm <measured pitch>
-python3 scripts/publish_board_tf.py "$cal/current_board_tf.json"      # leave running
+python3 scripts/check_calibration_drift.py <fit being published>.json "$cal/current_board_tf.json"
+#   exit 0 PASS: keep the running publisher.
+#   exit 1 DRIFT: publish the fresh fit and redo the touch-off:
+python3 scripts/publish_board_tf.py "$cal/current_board_tf.json"      # leave running (stop the old publisher)
 ```
+
+The drift check prints each camera's move and the camera-to-camera changes: if every camera "moved" by the same amount but the pairwise changes are ~0, the **board** moved, not the rig.
 
 Touch-off: record ≥ 4 board corners in `world` with the fingertip, then run Hazem's `ros/fit_table_tf.py points.csv` → `ros/wp3_table_tf.yaml`.
 
@@ -47,7 +54,15 @@ Touch-off: record ≥ 4 board corners in `world` with the fingertip, then run Ha
 - *Unpatched v5:* `start_perception.sh` always used a manual guess (`0.30 0.00 -0.008`) and ignored the yaml.
 - *Patched twin:* `start_perception.sh` / `twin.sh --wp3` use `ros/wp3_table_tf.yaml` whenever it exists. **Live WP3 refuses to start without it** unless you pass `--manual-table` (`twin.sh --wp3 --manual-table`), which prints a warning. Simulation/mock without the yaml prints `SIMULATION - table frame not calibrated`.
 
-**After any recalibration** (a camera moved, the board re-registered): restart the WP3 node *and* the bridge. The node caches the tripod / third transforms for its whole lifetime, and the bridge ignores `calibration_epoch` (both documented in `tests/test_v31_hazards.py` on branch `v3.1-evidence`).
+**After any recalibration** (a camera moved, the board re-registered):
+- **WP3 V3.2** re-reads `/tf_static` every second (`static_tf_refresh_s`). A changed camera transform starts a new `calibration_epoch` (`<epoch>#r1`, `#r2`…), drops every track from the old calibration and re-detects. The node log says `calibration changed: … moved X mm / Y deg`.
+- **Restart the bridge** anyway: Hazem's bridge still ignores `calibration_epoch`, so obstacles it already placed stay where the old calibration put them until WP3's next snapshot replaces them.
+- WP3 V3.1 (`v3.1-m1-candidate-*`) must be restarted too: it cached the fixed transforms for its whole lifetime.
+
+**While running**, V3.2 checks each camera's view of the table plane against its calibration once a second (`camera_health.<role>.calibration`):
+- `ok`; `suspect` (> 2.5° or > 6 mm at the workspace centre): **still fused**, reported. The tripod on the 12 Nov bag is `suspect` (4.7° depth tilt from the oblique-camera depth bias, table +3 mm at the workspace).
+- `mismatch` (> 6° or > 15 mm at the workspace centre, twice in a row): **not fused**. If no camera is left the scene `status` is `calibration_mismatch` (obstacles kept, no targets).
+- The check cannot see a camera that only slid along the table or rotated about the vertical; the session-start drift check covers that.
 
 ## 3. WP3 live node (M1 default: V2 path)
 

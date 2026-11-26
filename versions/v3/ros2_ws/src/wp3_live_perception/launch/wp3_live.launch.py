@@ -30,6 +30,9 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("enable_temporal_skip", default_value="false"),
         DeclareLaunchArgument("persistent_joint_occlusion", default_value="true"),
         DeclareLaunchArgument("reanchor_after", default_value="2"),
+        # V3.2: /tf_static re-read period (<= 0: cache for the node lifetime) and the per-camera plane check.
+        DeclareLaunchArgument("static_tf_refresh_s", default_value="1.0"),
+        DeclareLaunchArgument("calibration_check", default_value="true"),
         Node(
             package="wp3_live_perception",
             executable="wp3_live_node",
@@ -51,6 +54,8 @@ def generate_launch_description() -> LaunchDescription:
                 "enable_temporal_skip": ParameterValue(LaunchConfiguration("enable_temporal_skip"), value_type=bool),
                 "persistent_joint_occlusion": ParameterValue(LaunchConfiguration("persistent_joint_occlusion"), value_type=bool),
                 "reanchor_after": ParameterValue(LaunchConfiguration("reanchor_after"), value_type=int),
+                "static_tf_refresh_s": ParameterValue(LaunchConfiguration("static_tf_refresh_s"), value_type=float),
+                "calibration_check": ParameterValue(LaunchConfiguration("calibration_check"), value_type=bool),
             }],
         ),
     ])

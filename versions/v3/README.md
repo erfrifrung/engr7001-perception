@@ -1,6 +1,23 @@
-# WP3 perception V3 / V3.1
+# WP3 perception V3 / V3.1 / V3.2
 
 V3 = the V2 three-view candidate + the M4 fixes + the V3 region stage (`wp3_live/tiling.py`, `wp3_live/v3_regions.py`), CPU fast paths, the V3 tracker options and an optional async mask scheduler (`wp3_live/mask_scheduler.py`). The scene contract is unchanged (`wp3_scene_observation_v2.1`). The original V3 report (M4, synthetic) is not in this repository.
+
+## V3.2 (branch `v3.2`) — the three safety findings from the 26 Nov lab session
+
+Same perception and solver as V3.1 (no change to `tiling.py`, `v3_regions.py`, proposals or the scene schema). Every change has a V3.1 switch, and a test that reproduces the V3.1 failure first.
+
+| 26 Nov finding | V3.2 change | Switch (V3.1 value) | Evidence |
+|---|---|---|---|
+| **Duplicate-track spiral**: a 180 s soak produced 3203 track ids for 3 objects. One split or missed association left two tracks at one spot; the near-tie veto then rejected every later detection there, and each one spawned another track. | Tracks on one layer closer than 0.4 × block width cannot be two blocks (two blocks' inscribed circles would overlap): merged into the older id, which must re-confirm before it is a target again. | `tracker_merge_overlapping` (false) | `tests/test_v32_tracker.py`: V3.1 mode reproduces > 30 ids for one block; V3.2 keeps id 1. Touching blocks (25 mm) and stacked blocks are never merged. |
+| **Fault #12**: a block hidden > 3 s with healthy cameras (e.g. under the arm) was retired and removed from MoveIt. | A track that is not detected is retired only when 3 consecutive epochs show its footprint **empty** (depth observed, clearly below its top: `wp3_live/free_space.py`), or after 60 s unseen. A removed block now clears in ~0.2 s instead of 3 s. | `retire_on_observed_free` (false), `hidden_retire_max_s`, `free_confirm_frames` | `tests/test_v32_tracker.py`: hidden 20 s under an occluder + 5 s without depth → still an obstacle; seen empty → retired after 3 epochs. |
+| **Fault #10, observed live**: every camera had moved 99–274 mm since the published calibration; WP3 cached the fixed transforms for its lifetime and kept fusing. | (1) the node re-reads `/tf_static` every second: a change starts a new `calibration_epoch` (`…#r1`) and drops old tracks; (2) per-camera table-plane check (> 6° or > 15 mm at the workspace centre, twice in a row ⇒ that camera is not fused; none left ⇒ `status: calibration_mismatch`; 2.5–6° is `suspect`, reported and still fused); (3) `scripts/check_calibration_drift.py` for the session-start board check (catches the slides / pans the plane check cannot see). | ROS params `static_tf_refresh_s` (≤ 0), `calibration_check` (false) | `tests/test_v32_calibration.py`, `tests/test_v32_node_calibration.py` (live node picks up a new `/tf_static` without a restart). |
+
+**Real-data check (12 Nov 3-camera bag → node → patched bridge → fake MoveIt, laptop WSL, no ground truth):**
+- V3.2 and V3.1-tracker modes both give 3 track ids, 3 MoveIt objects and 0.2–0.3 mm median per-track spread (no regression; this bag never triggered the spiral).
+- **The first plane-check thresholds were wrong on real data.** They were 2.5°, with the offset measured at the camera. The bag's tripod depth plane is 4.7° off its board calibration (oblique depth bias; the table is +3 mm at the workspace), so the check rejected it: dual view fell from 12/47 to 2/54 epochs.
+- After the fix (6° reject, 2.5° `suspect`, offset at the workspace centre): dual view 9/25 (V2 path) and 15/26 (V3) with the check on, vs 15/35 with it off. Tripod `suspect`, wrist `ok`. Regression test: `test_12nov_bag_tripod_depth_tilt_is_not_rejected`.
+
+Not changed in V3.2 (still open): oblique-camera depth bias (+4.8 / +6.8 mm), tail latency (p95 ≈ 230–300 ms), the half-occluded-slab hazard (D6), Hazem's bridge ignoring `calibration_epoch` (restart the bridge after a recalibration).
 
 ## V3.1 (branch `v3.1`) — what changed and how to run it
 
