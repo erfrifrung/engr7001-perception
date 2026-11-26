@@ -183,16 +183,19 @@ class BlockTracker:
             return True
         return yaw_diff_deg(yaw_of_quat(quat), yaw_of_quat(oquat)) > self.yaw_tol
 
-    def actions(self, now, skip=()):
+    def actions(self, now, skip=(), hold_removals=()):
         """Planning-scene actions since the last call. Keys in `skip` (objects attached to the gripper) are left
-        untouched and stay pending, so a removal or move that happens while the twin owns them is not lost."""
+        untouched and stay pending, so a removal or move that happens while the twin owns them is not lost.
+        Keys in `hold_removals` (just released by the gripper) keep a pending removal for now, so the camera can
+        re-report the block where it was dropped before it is taken out of the scene."""
         skip = set(skip)
+        hold = skip | set(hold_removals)
         out = []
-        for key in sorted(self.deleted - skip):
+        for key in sorted(self.deleted - hold):
             out.append(('remove', key))
             self.applied.pop(key, None)
             self.stale.discard(key)
-        self.deleted &= skip
+        self.deleted &= hold
         for key, (dims, xyz, quat, seen) in sorted(self.latest.items()):
             if key in skip:
                 continue

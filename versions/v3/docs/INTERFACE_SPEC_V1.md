@@ -55,7 +55,14 @@ Schema `wp3_scene_observation_v2.1` is frozen by this document. Everything under
 
 ## 5. Consumer rules (proposed, to sign)
 
-1. **Collision world (WP2 bridge):** insert every track in state `MEASURED`/`DISPLACED` as an obstacle, **including** identity-ambiguous and non-eligible ones (they are physically there). Held tracks keep their last pose. Retired tracks are removed (snapshot semantics). Ignore non-`ok` messages. *(Implemented in `integration/twin_bridge_v31.patch`.)*
+1. **Collision world (WP2 bridge):**
+   - Insert every track in state `MEASURED`/`DISPLACED` as an obstacle, **including** identity-ambiguous and non-eligible ones (they are physically there).
+   - Held tracks keep their last pose. Retired tracks are removed (snapshot semantics).
+   - Ignore non-`ok` messages.
+   - In marker mode, removals are held while `/wp3_live/health` reports `no_valid_stream` or goes silent (a blind WP3 is not evidence that blocks left).
+   - Blocks in the gripper are left to the twin. A just-released block's pending removal is held for 1 s.
+
+   *Implemented on Hazem's twin v5 in `integration/twin_bridge_v31.patch`; live A/B against fake-hardware MoveIt in `integration/live_test/` (original v5 bridge fails 3/13 checks, patched passes 13/13).*
 2. **Targets (WP5):** a pose may be used as a grasp/fixture target only if `status == "ok"`, `state == "MEASURED"`, `snapshot_commit_eligible`, not `identity_ambiguous`, and `age_ms ≤ A` (A agreed in section 7).
 3. **Tolerance tiers (provisional, WP5 to confirm the grasp mode):** extract `|Δz| ≤ 2 mm`, lateral `≤ 3 mm`, yaw `≤ 2°`; place XY `≤ 3 mm`, yaw `≤ 2°`; free-block lengthwise pick `≤ 2.5 mm / 2°`.
 4. **Dead-band:** the bridge suppresses scene updates below 3 mm / 2°, so MoveIt can lag WP3 by that much. WP5 must read target poses from this topic, not from the MoveIt scene, or the dead-band must be reduced (decision in section 7).

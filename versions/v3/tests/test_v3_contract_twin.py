@@ -181,6 +181,21 @@ def test_block_tracker_attached_and_rejected_updates_are_not_lost():
     assert tr.actions(0.6)[0][0] == "move"     # retried, not lost
 
 
+def test_block_tracker_holds_removal_just_after_release():
+    """Twin v5 + V3.1: a block retired upstream while in the gripper is not removed the instant it is released
+    (hold_removals), and a re-observation during the hold cancels the removal."""
+    tr = wp3_link.BlockTracker()
+    q = (0.0, 0.0, 0.0, 1.0)
+    tr.observe("b", (0.075, 0.025, 0.015), (0.1, 0.0, 0.0), q, 0.0)
+    tr.actions(0.1)
+    tr.retain_only(set())                                   # retired while held
+    assert tr.actions(0.2, skip={"b"}) == []
+    assert tr.actions(0.3, hold_removals={"b"}) == []        # just released: removal held
+    tr.observe("b", (0.075, 0.025, 0.015), (0.12, 0.05, 0.0), q, 0.4)   # camera re-reports it at the drop pose
+    acts = tr.actions(0.5, hold_removals={"b"})
+    assert [a[0] for a in acts] == ["move"] and ("remove", "b") not in acts
+
+
 def test_bridge_skips_held_and_ineligible_tracks():
     v3 = _v3_payloads()[-1]
     t0 = dict(v3["tracks"][0])

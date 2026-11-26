@@ -44,6 +44,8 @@ SCENE_TOPIC = '/wp3_live/scene_observation'
 DEFAULT_NS = ('wp3_blocks', 'blocks', 'tracks')
 LIVE = (0.95, 0.55, 0.10, 1.0)      # orange: currently seen by WP3
 STALE = (0.55, 0.55, 0.55, 0.35)    # faded grey: last known pose, not currently seen
+FINGER_LINKS = ['left_outer_knuckle', 'left_inner_knuckle', 'left_finger',
+                'right_outer_knuckle', 'right_inner_knuckle', 'right_finger', 'link_tcp']
 
 
 class WP3SceneBridge(Node):
@@ -63,8 +65,14 @@ class WP3SceneBridge(Node):
         else:
             self.create_subscription(MarkerArray, args.topic, self.on_markers, qos)
             self.get_logger().info(f'listening on {args.topic} (ns={args.ns}); blocks go into frame "{self.frame}"')
+            # Markers carry no status. WP3's health topic says whether the cameras are delivering; while they are
+            # not, an empty marker snapshot means "cannot see", not "blocks left", so removals are held.
+            self.create_subscription(String, args.health_topic, self.on_health, qos)
+        self._health = None            # (monotonic time, ok) from /wp3_live/health; None = never received (mock)
         self.last_warn = {}
         self.pending_demo_removal = args.remove_demo_block
+        self._was_attached = set()     # objects in the gripper at the previous flush
+        self._released_at = {}         # key -> time it left the gripper (removal grace period)
 
     # ------------------------------------------------------------------ helpers
     def warn(self, key, text, every=5.0):
@@ -91,6 +99,21 @@ class WP3SceneBridge(Node):
         return tuple(float(v) for v in xyz), quat_from_matrix(R)
 
     # ------------------------------------------------------------------ input
+    def on_health(self, msg):
+        try:
+            h = json.loads(msg.data)
+        except Exception:
+            return
+        ok = h.get('status', 'ok') == 'ok' and h.get('fallback_mode') not in ('no_valid_stream', None)
+        self._health = (time.monotonic(), ok)
+
+    def wp3_can_see(self):
+        """True if a snapshot may remove blocks: no health topic at all (mock / older WP3), or a recent OK one."""
+        if self._health is None:
+            return True
+        t, ok = self._health
+        return ok and (time.monotonic() - t) <= self.args.health_timeout
+
     def on_markers(self, msg):
         now = time.monotonic()
         # WP3 publishes DELETEALL followed by every current track: the array is a full snapshot. Blocks that
@@ -119,7 +142,11 @@ class WP3SceneBridge(Node):
                 continue                     # no TF yet: still listed, so the last known pose is kept
             self.tracker.observe(key, dims, w[0], w[1], now)
         if snapshot:
-            self.tracker.retain_only(listed)
+            if self.wp3_can_see():
+                self.tracker.retain_only(listed)
+            else:
+                self.warn('blind', 'WP3 reports no valid camera stream (or its health went silent): '
+                                   'keeping last known blocks instead of removing them')
 
     def on_scene_json(self, msg):
         now = time.monotonic()
@@ -192,11 +219,20 @@ class WP3SceneBridge(Node):
         # In the gripper: the twin owns it until release. Ask MoveIt first so the tracker leaves those blocks
         # pending instead of recording an update that was never applied.
         attached = self.attached_ids() if pending else set()
+        now = time.monotonic()
+        # A block that was just released is often not re-reported yet (WP3 does not see a block in the gripper,
+        # the mock stops publishing it). Hold any removal that was waiting for it for --release-grace seconds,
+        # so it is not deleted from the scene and then re-added a moment later.
+        for k in self._was_attached - attached:
+            self._released_at[k] = now
+        self._was_attached = set(attached)
+        self._released_at = {k: t for k, t in self._released_at.items() if now - t < self.args.release_grace}
         before = self.tracker.snapshot()
-        actions = self.tracker.actions(time.monotonic(), skip=attached)
+        actions = self.tracker.actions(now, skip=attached, hold_removals=set(self._released_at))
         if not actions and not scene.world.collision_objects:
             return
         log = []
+        new_keys = []
         for act in actions:
             kind, key = act[0], act[1]
             if kind in ('add', 'move'):
@@ -210,6 +246,8 @@ class WP3SceneBridge(Node):
                 obj.primitive_poses.append(p)
                 scene.world.collision_objects.append(obj)
                 self.colour(scene, key, LIVE)
+                if kind == 'add':
+                    new_keys.append(key)
                 log.append(f'{kind} {key} ({xyz[0]:.3f}, {xyz[1]:.3f}, {xyz[2]:.3f})')
             elif kind == 'stale':
                 self.colour(scene, key, STALE)
@@ -217,6 +255,12 @@ class WP3SceneBridge(Node):
             elif kind == 'remove':
                 scene.world.collision_objects.append(CollisionObject(id=key, operation=CollisionObject.REMOVE))
                 log.append(f'remove {key}')
+        if new_keys and not self.args.no_finger_contact:
+            # v4: the fingers may close around a perceived block (the gripper body and the arm still may not hit it)
+            req = GetPlanningScene.Request()
+            req.components.components = PlanningSceneComponents.ALLOWED_COLLISION_MATRIX
+            acm = self.call(self.get_scene, req).scene.allowed_collision_matrix
+            scene.allowed_collision_matrix = bs.set_acm_entries(acm, {k: FINGER_LINKS for k in new_keys})
         if scene.world.collision_objects or scene.object_colors:
             if self.call(self.apply_scene, ApplyPlanningScene.Request(scene=scene)).success:
                 for line in log:
@@ -238,6 +282,12 @@ def main():
     ap.add_argument('--ns', nargs='*', default=list(DEFAULT_NS), help='only these marker namespaces are blocks (excludes wp3_ambiguous by default)')
     ap.add_argument('--stale-after', type=float, default=2.0, help='s unseen before a block is greyed out')
     ap.add_argument('--remove-after', type=float, default=None, help='s unseen before a block is removed')
+    ap.add_argument('--no-finger-contact', action='store_true', help='v4: do not let the fingers touch perceived blocks')
+    ap.add_argument('--health-topic', default='/wp3_live/health')
+    ap.add_argument('--health-timeout', type=float, default=1.0,
+                    help='s; marker snapshots only remove blocks while WP3 health is OK and newer than this')
+    ap.add_argument('--release-grace', type=float, default=1.0,
+                    help='s after the gripper releases a block during which its pending removal is held')
     ap.add_argument('--max-size', type=float, default=0.30, help='m, larger CUBE markers are ignored')
     ap.add_argument('--rate', type=float, default=5.0, help='Hz, planning-scene update rate')
     ap.add_argument('--remove-demo-block', action='store_true')

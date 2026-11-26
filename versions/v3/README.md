@@ -21,7 +21,7 @@ bash scripts/launch_live.sh --v3 on --v3-solver adaptive --v3-budget-ms 45 ...  
 | Tried and reverted (measured) | yaw from FREE-bordered sides only (L layout 1.30 mm vs < 1.0 mm); measured footprint dims (read 30.5 mm widths for 25 mm blocks); per-pool search structures (prove 134 vs 169 published) | notes in `wp3_live/tiling.py` |
 | Seam cue | periodic-stripe alias check restored (was disabled by a hard-coded 0) | striped-slab ablation |
 | Robot space | wrist-camera housing is UNKNOWN; upper layers need `link6` TF | |
-| Twin bridge | snapshot semantics (retired tracks removed), non-`ok` messages ignored, attached objects and rejected updates not lost | `tests/test_v3_contract_twin.py`, patch `../../integration/twin_bridge_v31.patch` |
+| Twin bridge (on Hazem's twin v5) | snapshot semantics (retired tracks removed); non-`ok` messages ignored; removals held while WP3 health says it is blind; blocks in the gripper left to the twin, with a 1 s grace after release; rejected updates retried; v5's finger-contact collision entries kept | `tests/test_v3_contract_twin.py`; live A/B against fake MoveIt in `../../integration/live_test/` (original v5: 10/13, patched: 13/13); patch `../../integration/twin_bridge_v31.patch` |
 | Scoring | Z gated; yaw / Z percentiles reported | `bench/score.py` |
 
 **Known, pre-existing hazards** (strict xfail tests, so any change is noticed): the visible half of a half-occluded 75 × 50 slab is published as a block, and a block-sized object floating at a layer-multiple height is published as a stacked block (V2 single-block path). Mitigation: declared lab object set and robot self-filter with TF. See `docs/INTERFACE_SPEC_V1.md` D6.
