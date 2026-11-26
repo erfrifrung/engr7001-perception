@@ -1,3 +1,64 @@
+diff --git a/ros/start_perception.sh b/ros/start_perception.sh
+index becd8eb..a0f2d87 100755
+--- a/ros/start_perception.sh
++++ b/ros/start_perception.sh
+@@ -1,21 +1,49 @@
+ #!/usr/bin/env bash
+ # v4: perception into the twin in ONE window: table frame + WP3 scene bridge (+ mock blocks unless --live).
+-#   bash start_perception.sh            simulation: 3 fake (mock) blocks, clearly labelled as mock
+-#   bash start_perception.sh --wood     mock with the 45 mm wooden props
+-#   bash start_perception.sh --live     real WP3 node publishing /wp3_live/markers (no mock)
+-# Table frame: edit TABLE_XYZ / TABLE_YAW after the Step B fit (fit_table_tf.py prints the values).
++#   bash start_perception.sh                         simulation: 3 fake (mock) blocks, clearly labelled as mock
++#   bash start_perception.sh --wood                  mock with the 45 mm wooden props
++#   bash start_perception.sh --live                  real WP3 node publishing /wp3_live/markers (no mock)
++#   bash start_perception.sh --live --manual-table   real WP3 node with the MANUAL table guess (not calibrated)
++# Table frame (WP3 V3.1 change):
++#   - wp3_table_tf.yaml (written by fit_table_tf.py after the touch-off) is used whenever it exists.
++#   - --live without the yaml refuses to start unless --manual-table is given: real blocks placed in an
++#     unmeasured table frame look plausible in the twin but can be centimetres off.
++#   - simulation / mock without the yaml uses TABLE_XYZ / TABLE_YAW and says so loudly.
+ TABLE_XYZ="${TABLE_XYZ:-0.30 0.00 -0.008}"
+ TABLE_YAW="${TABLE_YAW:-0}"
+ cd "$(dirname "$0")"
++LIVE=0; MANUAL=0; MOCK_ARGS=()
++for a in "$@"; do
++  case "$a" in
++    --live) LIVE=1 ;;
++    --manual-table) MANUAL=1 ;;
++    *) MOCK_ARGS+=("$a") ;;
++  esac
++done
++if [[ -f wp3_table_tf.yaml && $MANUAL == 0 ]]; then
++  TF_ARGS=(--file wp3_table_tf.yaml)
++  echo "table frame: MEASURED (wp3_table_tf.yaml)"
++elif [[ $LIVE == 1 && $MANUAL == 0 ]]; then
++  echo "ERROR: live WP3 needs the measured table frame (wp3_table_tf.yaml from fit_table_tf.py)." >&2
++  echo "       Run the touch-off fit first, or pass --manual-table to use the uncalibrated guess ($TABLE_XYZ, ${TABLE_YAW} deg)." >&2
++  exit 2
++else
++  TF_ARGS=(--xyz $TABLE_XYZ --yaw $TABLE_YAW)
++  if [[ $LIVE == 1 ]]; then
++    echo "WARNING: LIVE WP3 with a MANUAL, UNCALIBRATED table frame ($TABLE_XYZ, ${TABLE_YAW} deg). Do not trust block positions."
++  else
++    echo "SIMULATION - table frame not calibrated (manual $TABLE_XYZ, ${TABLE_YAW} deg)"
++  fi
++fi
+ pids=()
+ cleanup() { kill "${pids[@]}" 2>/dev/null; wait 2>/dev/null; echo "perception stopped"; }
+ trap cleanup EXIT INT TERM
+-python3 wp3_table_tf.py --xyz $TABLE_XYZ --yaw $TABLE_YAW & pids+=($!)
++python3 wp3_table_tf.py "${TF_ARGS[@]}" & pids+=($!)
+ sleep 1
+ python3 wp3_scene_bridge.py --remove-demo-block & pids+=($!)
+-if [[ "$1" != "--live" ]]; then
++if [[ $LIVE == 0 ]]; then
+   sleep 2
+-  python3 mock_wp3_publisher.py "$@" & pids+=($!)
++  python3 mock_wp3_publisher.py "${MOCK_ARGS[@]}" & pids+=($!)
+ fi
+ echo "perception running (Ctrl+C stops all of it)"
+ wait
 diff --git a/ros/wp3_link.py b/ros/wp3_link.py
 index 6554b0c..149c983 100755
 --- a/ros/wp3_link.py
@@ -216,3 +277,55 @@ index 4d57323..d00c346 100755
      ap.add_argument('--max-size', type=float, default=0.30, help='m, larger CUBE markers are ignored')
      ap.add_argument('--rate', type=float, default=5.0, help='Hz, planning-scene update rate')
      ap.add_argument('--remove-demo-block', action='store_true')
+diff --git a/twin.sh b/twin.sh
+index f6d8bfb..1e34ba3 100755
+--- a/twin.sh
++++ b/twin.sh
+@@ -4,7 +4,8 @@
+ #   bash twin.sh                 simulation, 3 mock blocks, top speed 50 mm/s
+ #   bash twin.sh --speed 0.08    a different top speed (m/s, at most 0.15)
+ #   bash twin.sh --no-mock       simulation without the mock blocks
+-#   bash twin.sh --wp3           blocks from the live WP3 perception node instead of the mock
++#   bash twin.sh --wp3           blocks from the live WP3 perception node (needs ros/wp3_table_tf.yaml)
++#   bash twin.sh --wp3 --manual-table   live WP3 with the manual, UNCALIBRATED table guess (explicit opt-in)
+ #   bash twin.sh --real          the REAL arm (asks YES first; top speed 30 mm/s unless --speed is given)
+ #   bash twin.sh --rviz          also show RViz (for debugging)
+ #
+@@ -14,15 +15,16 @@
+ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ ROS="$HERE/ros"
+ LOGS=~/twin_logs
+-REAL=0; SPEED=""; MOCK=1; WP3=0; RVIZ=0
++REAL=0; SPEED=""; MOCK=1; WP3=0; RVIZ=0; MANUAL_TABLE=0
+ while [ $# -gt 0 ]; do
+   case "$1" in
+     --real) REAL=1 ;;
+     --speed) SPEED="$2"; shift ;;
+     --no-mock) MOCK=0 ;;
+     --wp3) WP3=1; MOCK=0 ;;
++    --manual-table) MANUAL_TABLE=1 ;;
+     --rviz) RVIZ=1 ;;
+-    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
++    -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
+     *) echo "unknown option $1 (try --help)"; exit 1 ;;
+   esac
+   shift
+@@ -37,6 +39,9 @@ say() { printf '\033[1;36m[twin]\033[0m %s\n' "$*"; }
+ die() { printf '\033[1;31m[twin] %s\033[0m\n' "$*"; exit 1; }
+ 
+ # ---------------------------------------------------------------- checks
++if [ $WP3 = 1 ] && [ ! -f "$ROS/wp3_table_tf.yaml" ] && [ $MANUAL_TABLE = 0 ]; then
++  die "--wp3 needs the measured table frame ros/wp3_table_tf.yaml (fit_table_tf.py after the touch-off). Add --manual-table to use the uncalibrated guess."
++fi
+ ros2 node list 2>/dev/null | grep -q move_group && die "MoveIt is already running (an old start_sim.sh / start_real.sh?). Stop it first."
+ for port in 9090 8000; do
+   ss -ltn 2>/dev/null | grep -q ":$port " && die "Port $port is in use (an old rosbridge or GUI server?). Stop it first."
+@@ -98,7 +103,7 @@ if [ $MOCK = 1 ]; then
+   bash start_perception.sh > "$LOGS/perception.log" 2>&1 &
+ elif [ $WP3 = 1 ]; then
+   say "perception: live WP3 node"
+-  bash start_perception.sh --live > "$LOGS/perception.log" 2>&1 &
++  bash start_perception.sh --live $([ $MANUAL_TABLE = 1 ] && echo --manual-table) > "$LOGS/perception.log" 2>&1 &
+ fi
+ 
+ # ---------------------------------------------------------------- 3. GUI

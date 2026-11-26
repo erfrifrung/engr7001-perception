@@ -41,13 +41,13 @@ python3 scripts/register_board.py "$cal" <orientation_reference.json> --pitch-mm
 python3 scripts/publish_board_tf.py "$cal/current_board_tf.json"      # leave running
 ```
 
-Touch-off: record ≥ 4 board corners in `world` with the fingertip, then run Hazem's `ros/fit_table_tf.py points.csv` → `wp3_table_tf.yaml`.
+Touch-off: record ≥ 4 board corners in `world` with the fingertip, then run Hazem's `ros/fit_table_tf.py points.csv` → `ros/wp3_table_tf.yaml`.
 
-**Important:** v5's `start_perception.sh` always passes `--xyz $TABLE_XYZ` (default `0.30 0.00 -0.008`) and ignores the yaml. Export the fitted values before starting the twin:
+**Table frame.**
+- *Unpatched v5:* `start_perception.sh` always used a manual guess (`0.30 0.00 -0.008`) and ignored the yaml.
+- *Patched twin:* `start_perception.sh` / `twin.sh --wp3` use `ros/wp3_table_tf.yaml` whenever it exists. **Live WP3 refuses to start without it** unless you pass `--manual-table` (`twin.sh --wp3 --manual-table`), which prints a warning. Simulation/mock without the yaml prints `SIMULATION - table frame not calibrated`.
 
-```bash
-export TABLE_XYZ="<x y z from the fit>" TABLE_YAW="<yaw deg from the fit>"
-```
+**After any recalibration** (a camera moved, the board re-registered): restart the WP3 node *and* the bridge. The node caches the tripod / third transforms for its whole lifetime, and the bridge ignores `calibration_epoch` (both documented in `tests/test_v31_hazards.py` on branch `v3.1-evidence`).
 
 ## 3. WP3 live node (M1 default: V2 path)
 
@@ -64,7 +64,8 @@ To evaluate V3 live (not the M1 default): add `--v3 on --v3-solver prove --v3-bu
 
 ```bash
 cd ~/digital_twin_v5_wp3_v31
-bash twin.sh --wp3          # simulated arm + scene + perception from the live WP3 node + GUI
+bash twin.sh --wp3          # simulated arm + scene + live WP3 perception + GUI (needs ros/wp3_table_tf.yaml)
+bash twin.sh --wp3 --manual-table   # only if the touch-off hasn't been done yet: positions NOT calibrated
 # real arm (supervised only): bash twin.sh --real --wp3
 ```
 
@@ -74,7 +75,7 @@ Before the real session, the bridge can be checked against fake-hardware MoveIt 
 TWIN=~/digital_twin_v5 bash ~/engr7001-perception/integration/live_test/run_twin_live_test.sh   # TWIN = UNPATCHED v5
 ```
 
-Expect the original v5 bridge to fail checks 3, 5b and 6b (phantom/duplicate obstacles) and the patched one to pass 13/13, plus 3/3 JSON checks.
+Expect the original v5 bridge to fail checks 3, 5b and 6b (phantom/duplicate obstacles) and the patched one to pass 13/13, plus 3/3 JSON checks and 2/2 checks with Hazem's mock publisher.
 
 Check in the twin GUI (or RViz with `--rviz`):
 - every block WP3 shows appears once;

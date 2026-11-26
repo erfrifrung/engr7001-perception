@@ -46,6 +46,13 @@ done
 echo "== JSON scenario, patched bridge"
 (cd "$T/patched/ros" && exec python3 wp3_scene_bridge.py --use-scene-json) > "$OUT/bridge_json.log" 2>&1 & BP=$!
 sleep 3; python3 "$HERE/twin_driver.py" json "$OUT/json_patched.json"; kill $BP; wait $BP 2>/dev/null
+echo "== Hazem's mock publisher (--drop-after 8) against the patched bridge"
+(cd "$T/patched/ros" && exec python3 wp3_scene_bridge.py --remove-demo-block) > "$OUT/bridge_mock.log" 2>&1 & BP=$!
+sleep 3
+T_MOCK=$(date +%s.%N)
+(cd "$T/patched/ros" && exec python3 mock_wp3_publisher.py --drop-after 8) > "$OUT/mock.log" 2>&1 & MP=$!
+python3 "$HERE/twin_driver.py" mock "$OUT/mock.json" 8 "$T_MOCK"
+kill $MP $BP; wait $MP $BP 2>/dev/null
 if [ -n "${BAG:-}" ] && [ -n "${WP3:-}" ]; then
   source "$WP3/ros2_ws/install/setup.bash"; export PYTHONPATH="$WP3:${PYTHONPATH:-}"
   TOPICS="/tf_static /perception/wrist/color/image_raw /perception/wrist/aligned_depth_to_color/image_raw /perception/wrist/color/camera_info /perception/tripod/color/image_raw /perception/tripod/aligned_depth_to_color/image_raw /perception/tripod/color/camera_info"

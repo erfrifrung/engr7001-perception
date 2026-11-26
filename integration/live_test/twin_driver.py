@@ -217,6 +217,31 @@ def scenario_json(d):
     return R
 
 
+def scenario_mock(d, drop_after, t_start_wall):
+    """Hazem's mock_wp3_publisher.py --drop-after N, started by the harness at wall time t_start_wall: all 3
+    blocks must appear, and block 3 must leave once the mock stops publishing it (snapshot semantics)."""
+    R = {}
+    t = lambda: time.time() - t_start_wall
+    first3 = None
+    while t() < drop_after:
+        w, _ = d.scene()
+        if {'wp3_blocks_1', 'wp3_blocks_2', 'wp3_blocks_3'} <= set(w):
+            first3 = round(t(), 2)
+            break
+        rclpy.spin_once(d, timeout_sec=0.2)
+    R['m1_three_mock_blocks_present'] = dict(ok=first3 is not None, seen_at_s=first3)
+    gone = None
+    while t() < drop_after + 6.0:
+        w, _ = d.scene()
+        if 'wp3_blocks_3' not in w and {'wp3_blocks_1', 'wp3_blocks_2'} <= set(w):
+            gone = round(t(), 2)
+            break
+        rclpy.spin_once(d, timeout_sec=0.2)
+    R['m2_dropped_block_removed_others_kept'] = dict(ok=gone is not None and gone >= drop_after, removed_at_s=gone,
+                                                     drop_after_s=drop_after)
+    return R
+
+
 def watch(d, secs):
     t0 = time.monotonic(); hist = []
     while time.monotonic() - t0 < secs:
@@ -236,6 +261,8 @@ def main():
     time.sleep(1.0)
     if mode == 'watch':
         res = watch(d, float(sys.argv[3]))
+    elif mode == 'mock':
+        res = scenario_mock(d, float(sys.argv[3]), float(sys.argv[4]))
     else:
         d.cleanup()
         res = scenario_markers(d) if mode == 'markers' else scenario_json(d)
