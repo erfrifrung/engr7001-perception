@@ -22,7 +22,7 @@ Run on `three_cam_demo_bag` (45 mm wooden props, no ground truth), fake-hardware
 ## 4. Budget sweep: completed on Ryzen 5 5600 (see Section 6)
 `bash bench/budget_sweep.sh` (prove/enumerate × 30/45/66/120/250 ms/unlimited, 2 rounds, pinned, plus a 60 000-node cap). `bench/sweep_analyze.py` separates timeouts and counterexamples, reports correct and wrong poses and latency, and lists the blocks still unresolved at an unlimited budget. `run_scenes.py` now logs the V3 stage's per-region outcomes. See Section 6 below for the measured Ryzen 5 5600 results.
 
-## 5. V4 implications so far
+## 5. V4 implications so fa
 - On real frames the **front end** dominates (proposals and RGB seam checks, then heightmap and deprojection), not the solver. Selective computation (skip unchanged regions) and moving the RGB seam scoring off the Python path are the first V4 targets.
 - The solver matters only on touching or flush scenes; quantify it with the sweep.
 - Measure only on an uncontended host with one node, the bag pre-read, rotated order and repeated runs.
@@ -99,3 +99,38 @@ All four bags were replayed with the 45 mm wooden-prop profile (`historical_prop
 - **Parked-arm V2 (`require_fk_for_moving_wrist=false`, `third_ns=/perception/third`):** `dwell_reason=stationary_session_imu_ok` (`118/121`), `dual_view=46/121` (`38.0%`), `8.09 Hz`, stage `total_ms` `55.70 / 232.14 ms`, `publish - obs` `260.19 / 438.96 ms`, `rx_minus_hdr_ms` p50 `85.99 ms` (wrist) / `84.42 ms` (side).
 - **Parked-arm V3.1 (`prove`, `45 ms`, `third_ns=/perception/third`):** `dwell_reason=stationary_session_imu_ok` (`90/91`), `dual_view=37/91` (`40.7%`), `7.70 Hz`, stage `total_ms` `63.45 / 169.14 ms`, `v3_regions_ms` (`n=80`) `2.24 / 9.17 ms`, `publish - obs` `258.99 / 429.62 ms`, `rx_minus_hdr_ms` p50 `85.84 ms` (wrist) / `83.99 ms` (side).
 - Camera-to-driver receive lag (`rx_minus_hdr_ms` ~85 ms p50) plus live camera/display contention (`~10–12 Hz` camera streams, `live_view.py` running) pushed `publish - obs` above the 150 ms WP5 freshness bound across all live runs.
+
+## 7. Round 2 live diagnostics, `live_node.py` optimisation, and MoveIt fault tests (Ryzen 5 5600 + WSL)
+
+### 7.1 Transport, USB topology, and stale `/tf_static` diagnosis
+- **USB & FastDDS SHM:** All 3 RealSense cameras share Bus 004 (`28:00.3` Matisse xHCI, 5000M); Bus 002 (`02:00.0`, 10000M) is empty. All 3 camera nodes use `fastdds_shm_profile.xml`, while pre-existing `live_view.py` runs without SHM. Disabling SHM (Cond F) stalled `wrist/color` and dropped `tripod/color` to `5.77 Hz` (`aligned_depth` `13.09 Hz`). Turning `align_depth=false` cut camera driver CPU ~3× (`15.7–17.7% -> 5.4–6.2%`) and saved ~8 ms.
+- **Test 1 (Stale `/tf_static` diff, Fault #10 observed live):** Comparing the broadcast 19 Nov `/tf_static` against a fresh 26 Nov checkerboard fit (`current_board_tf.json`) showed `wrist_link` shifted `98.9 mm` (`[+72.2, +10.6, -66.8] mm`, `3.30°`), `tripod_link` `273.9 mm` (`38.11°`), `third_link` `149.1 mm` (`25.12°`), and pairwise camera-to-camera TFs `193.4–641.8 mm` (`22.86–63.17°`). Robot arm IP was unreachable (`FAILED` ARP) and `/joint_states` was absent.
+
+### 7.2 Depth accuracy vs resolution/FPS (Test 3, `register_board.py --pitch-mm 20.0`)
+| Mode | Gate | `wrist` RMS / nz / bias (min/med/max mm) | `tripod` RMS / nz / bias (min/med/max mm) | `third` RMS / nz / bias (min/med/max mm) |
+|---|---|---|---|---|
+| `720p15` (`1280x720x15`) | **PASS** | `0.192 px` / `99.98%` / `-1.88 / +1.08 / +4.62` | `0.200 px` / `96.62%` / `-0.60 / +4.77 / +9.21` | `0.166 px` / `90.96%` / `+0.88 / +6.76 / +11.76` |
+| `480d15` (`720p` RGB / `480p` depth) | **PASS** | `0.190 px` / `100.00%` / `-0.26 / +1.82 / +4.57` | `0.197 px` / `99.75%` / `+2.01 / +4.78 / +7.16` | `0.159 px` / `99.02%` / `+4.20 / +7.69 / +11.31` |
+| `480p30` (`848x480x30`) | **FAIL** | median bias `+2.52` (`0.122–0.139 px`, `97.85–100% nz`) | median bias `+2.91` | median bias **`+9.09 >= 8 mm`** |
+
+Decision: keep `1280x720x15` as default and keep `third` excluded from V3 carving.
+
+### 7.3 15 Hz vs 30 Hz ABAB + per-stage latency breakdown (Tests 2 & 4, untweaked `live_node.py`, `publish_overlay=false`)
+| Run | `pub_hz` | `hdr->rx` p50/p95 | `rx->tick` p50/p95 | `compute` p50/p95 | `overhead` p50/p95 | `TOTAL` p50/p95 (ms) |
+|---|---:|---:|---:|---:|---:|---:|
+| `A1_15hz_t15` | `12.58 Hz` | `85.5 / 136.7` | `10.8 / 22.9` | `16.7 / 104.1` | `3.1 / 66.4` | `118.6 / 248.9` |
+| `A1_15hz_t30` (`rate_hz=30` on 15 Hz) | `14.82 Hz` | — | `25.1 / 114.8` | — | — | `155.9 / 304.6` |
+| `B1_30hz_t30` (`480p30`, cams `29.99 Hz`) | `9.04 Hz` | `43.6 / 52.0` | `20.0 / 37.1` | `64.1 / 207.1` | — | `135.3 / 339.5` |
+| `A2_15hz_t15` | `13.25 Hz` | `85.1 / 102.2` | `12.1 / 51.5` | `27.4 / 112.4` | `4.1 / 44.4` | `137.2 / 233.9` |
+| `B2_30hz_t30` | `9.63 Hz` | `43.5 / 54.4` | `19.1 / 34.7` | `65.2 / 230.7` | — | `136.5 / 318.1` |
+
+`848x480x30` held `29.99 Hz` (`38 ms` topic delay) across all 3 cameras on Bus 004 and halved `hdr->rx` (`85 -> 43.5 ms`), but 270 msg/s Python callbacks saturated the 2-thread executor GIL and inflated `compute` p50 (`17–27 -> 64–65 ms`).
+
+### 7.4 `live_node.py` tweak, 180 s soak, golden bag, and MoveIt faults (`v3.1`, `68ec2da`)
+- **Code changes & regression suite:** `live_node.py` splits `_build_view` into `_select_pair` + `_decode_view` (signature-gated copy skip via `pair_sig`/`health_sig`), uses zero-copy `np.frombuffer` for unpadded `rgb8`/`16UC1`, and skips `render_overlay()` when `pub_overlay.get_subscription_count() == 0` and not saving PNG. Local checks: `verify_zero_moveit.py` `PASS`, `pytest -q tests` **`62 passed, 2 xfailed`** (`86.27s`).
+- **Live Ryzen A/B (`720p15`, `current_board_tf.json`, 3 wooden cubes):**
+  - `publish_overlay=false`: `ok=238/262`, **`13.78 Hz`**, `dual_view=238/238 (100%)`, `TOTAL=121.6 / 232.7 ms` (`overhead=4.3 / 43.9 ms`).
+  - `publish_overlay=true` (0 subs, PNG save): `ok=198/216`, **`12.67 Hz`**, `dual_view=177/198 (89.4%)`, `TOTAL=128.3 / 241.6 ms`; `overlay_00211.png` confirmed `resolved=3 amb=0` across wrist, side, and third views.
+- **Test 5 (180 s soak at `720p15`):** `ok=2068/2091`, `11.63 Hz`, `dual_view=2053/2068 (99.3%)`, `TOTAL=171.1 / 307.2 ms` (drift `167.1/302.4 -> 174.3/318.4 ms`); axis-aligned middle cube `track 3` (`(-9.0, 131.5) mm`, `n=2068/2068`) held `std_xy=(0.09, 0.12) mm`, `std_z=0.13 mm`, `std_yaw=0.02°`, whereas two ~45°-rotated corner cubes churned track IDs `[1..3203]` (`eq3=1/2068`). Process RSS rose `535.6 -> 575.2 MB` over 180 s.
+- **Test 9 (Fresh golden bag):** Recorded a 16.3 s (`3.0 GiB`, 2767 msgs) MCAP bag (`/tf_static` + 3 cameras' color/aligned_depth/camera_info) with `current_board_tf.json` on the lab external drive (not committed).
+- **WSL MoveIt Faults #7 & #9 (`integration/live_test/`):** `run_twin_live_test.sh` updated to launch `wp3_live_node` directly (`orig 10/13, patched 13/13, json 3/3, mock 2/2`). Live MoveIt Fault #7 (`SIGKILL` publisher keeps `['wp3_blocks_1', 'wp3_blocks_2']` after 3.5 s) and Fault #9 (1.5 s silent health blocks empty `DELETEALL` snapshot, fresh `ok` health removes `['wp3_blocks_11', 'wp3_blocks_12']` -> `[]`) both passed.
