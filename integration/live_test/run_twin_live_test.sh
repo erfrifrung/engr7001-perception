@@ -57,7 +57,9 @@ if [ -n "${BAG:-}" ] && [ -n "${WP3:-}" ]; then
   source "$WP3/ros2_ws/install/setup.bash"; export PYTHONPATH="$WP3:${PYTHONPATH:-}"
   TOPICS="/tf_static /perception/wrist/color/image_raw /perception/wrist/aligned_depth_to_color/image_raw /perception/wrist/color/camera_info /perception/tripod/color/image_raw /perception/tripod/aligned_depth_to_color/image_raw /perception/tripod/color/camera_info"
   echo "== full pipeline (patched bridge): $BAG"
-  ros2 run wp3_live_perception wp3_live_node --ros-args -p use_sim_time:=true \
+  NODE_BIN="$WP3/ros2_ws/install/wp3_live_perception/lib/wp3_live_perception/wp3_live_node"
+  [ -x "$NODE_BIN" ] || NODE_BIN="$(ros2 pkg prefix wp3_live_perception)/lib/wp3_live_perception/wp3_live_node"
+  "$NODE_BIN" --ros-args -p use_sim_time:=true \
     -p config:="$WP3/ros2_ws/src/wp3_live_perception/config/historical_props_12nov.json" \
     -p policy:=whole_partition_mv -p publish_overlay:=false > "$OUT/live_node.log" 2>&1 & LP=$!
   (cd "$T/patched/ros" && exec python3 wp3_scene_bridge.py --remove-demo-block) > "$OUT/bridge_pipeline.log" 2>&1 & BP=$!

@@ -320,7 +320,7 @@ class WP3LivePerceptionNode(Node):
             self._cached_robot_links = None
         return out
 
-    def _build_view(self, role: str, now_s: float) -> tuple[ViewInput | None, dict[str, Any]]:
+    def _select_pair(self, role: str, now_s: float) -> tuple[dict[str, Any] | None, dict[str, Any]]:
         with self._latest_lock:
             buf = self._latest[role]
             rgb, depth, cinfo = buf["rgb"], buf["depth"], buf["cinfo"]
@@ -368,26 +368,21 @@ class WP3LivePerceptionNode(Node):
         )
         if role == "third" and T_tc is None:
             return None, {"status": "missing_table_tf", "tf_valid": False}
-        rgb_np = self.bridge.imgmsg_to_cv2(msg_rgb, desired_encoding="rgb8")
-        dep_np = self.bridge.imgmsg_to_cv2(msg_dep, desired_encoding="passthrough")
-        if rgb_np.shape[:2] != (cam.height, cam.width) or dep_np.shape[:2] != rgb_np.shape[:2]:
+        if (msg_rgb.height, msg_rgb.width) != (cam.height, cam.width) or (msg_dep.height, msg_dep.width) != (msg_rgb.height, msg_rgb.width):
             # Wrong profile or unaligned depth would silently mis-project every pixel: refuse the view.
             return None, {"status": "camera_info_shape_mismatch", "tf_valid": T_tc is not None}
-        vi = ViewInput(
-            role="tripod" if role == "side" else role,
-            cam=cam,
-            rgb_img=np.ascontiguousarray(rgb_np, dtype=np.uint8),
-            depth_raw=np.ascontiguousarray(dep_np),
-            T_table_cam=T_tc,
-            stamp_ns=h_rgb,
-            rx_ns=rx_rgb_ns,
-            is_fresh=not health.stale,
-            is_frozen=health.frozen,
-            # V3.1: never fall back to a camera-local plane frame live. Without T_table_cam the epoch reports
-            # status "uncalibrated" and publishes no poses under frame_id "jenga_table".
-            pose_frame_mode="table",
-        )
-        return vi, {
+        sel = {
+            "role": role,
+            "cam": cam,
+            "msg_rgb": msg_rgb,
+            "msg_dep": msg_dep,
+            "T_tc": T_tc,
+            "h_rgb": h_rgb,
+            "rx_rgb_ns": rx_rgb_ns,
+            "is_fresh": not health.stale,
+            "is_frozen": health.frozen,
+        }
+        return sel, {
             "status": "frozen" if health.frozen else ("stale" if health.stale else "ok"),
             "stamp_ns": h_rgb,
             "age_ms": round((now_s - h_rgb * 1e-9) * 1000.0, 2),
@@ -395,20 +390,52 @@ class WP3LivePerceptionNode(Node):
             "tf_valid": T_tc is not None,
         }
 
+    def _decode_view(self, sel: dict[str, Any] | None) -> ViewInput | None:
+        if sel is None:
+            return None
+        msg_rgb, msg_dep = sel["msg_rgb"], sel["msg_dep"]
+        if msg_rgb.encoding == "rgb8" and msg_rgb.step == msg_rgb.width * 3:
+            rgb_np = np.frombuffer(msg_rgb.data, dtype=np.uint8).reshape(msg_rgb.height, msg_rgb.width, 3).copy()
+        else:
+            rgb_np = np.ascontiguousarray(self.bridge.imgmsg_to_cv2(msg_rgb, desired_encoding="rgb8"), dtype=np.uint8)
+        if msg_dep.encoding == "16UC1" and msg_dep.step == msg_dep.width * 2:
+            dep_np = np.frombuffer(msg_dep.data, dtype=np.uint16).reshape(msg_dep.height, msg_dep.width).copy()
+        else:
+            dep_np = np.ascontiguousarray(self.bridge.imgmsg_to_cv2(msg_dep, desired_encoding="passthrough"))
+        role = sel["role"]
+        return ViewInput(
+            role="tripod" if role == "side" else role,
+            cam=sel["cam"],
+            rgb_img=rgb_np,
+            depth_raw=dep_np,
+            T_table_cam=sel["T_tc"],
+            stamp_ns=sel["h_rgb"],
+            rx_ns=sel["rx_rgb_ns"],
+            is_fresh=sel["is_fresh"],
+            is_frozen=sel["is_frozen"],
+            # V3.1: never fall back to a camera-local plane frame live. Without T_table_cam the epoch reports
+            # status "uncalibrated" and publishes no poses under frame_id "jenga_table".
+            pose_frame_mode="table",
+        )
+
+    def _build_view(self, role: str, now_s: float) -> tuple[ViewInput | None, dict[str, Any]]:
+        sel, health = self._select_pair(role, now_s)
+        return self._decode_view(sel), health
+
     def _tick(self) -> None:
         now_ns = self.get_clock().now().nanoseconds
         now_s = now_ns * 1e-9
-        wrist_vi, wrist_h = self._build_view("wrist", now_s)
-        side_vi, side_h = self._build_view("side", now_s)
+        wrist_sel, wrist_h = self._select_pair("wrist", now_s)
+        side_sel, side_h = self._select_pair("side", now_s)
 
-        third_vi = None
+        third_sel = None
         cam_health = {"wrist": wrist_h, "side": side_h}
-        views = [wrist_vi, side_vi]
+        sels = [wrist_sel, side_sel]
         if self.third_ns:
-            third_vi, third_h = self._build_view("third", now_s)
+            third_sel, third_h = self._select_pair("third", now_s)
             cam_health["third"] = third_h
-            views.append(third_vi)
-        pair_sig = tuple(view.stamp_ns if view is not None else -1 for view in views)
+            sels.append(third_sel)
+        pair_sig = tuple(sel["h_rgb"] if sel is not None else -1 for sel in sels)
         health_sig = tuple(str(health.get("status", "")) for health in cam_health.values())
         if (
             any(stamp >= 0 for stamp in pair_sig)
@@ -422,6 +449,9 @@ class WP3LivePerceptionNode(Node):
         self._last_health_sig = health_sig
         self._last_pub_wall_s = now_s
         self._epoch_id += 1
+        wrist_vi = self._decode_view(wrist_sel)
+        side_vi = self._decode_view(side_sel)
+        third_vi = self._decode_view(third_sel)
 
         dwell = None
         if wrist_vi is not None:
@@ -504,17 +534,21 @@ class WP3LivePerceptionNode(Node):
         self._publish_markers(header, tracks, epoch)
 
         if self.pub_overlay_flag:
-            bgr = render_overlay(
-                wrist_vi.rgb_img if wrist_vi else None,
-                side_vi.rgb_img if side_vi else None,
-                epoch,
-                tracks,
-                self.cfg.block,
-                third_rgb=third_vi.rgb_img if third_vi else None,
-            )
-            self.pub_overlay.publish(self.bridge.cv2_to_imgmsg(bgr, encoding="bgr8", header=header))
-            if self._io_writer is not None and self.save_dir is not None and (self._epoch_id % 15 == 1 or self._epoch_id <= 3):
-                self._io_writer.write_png(self.save_dir / "overlays" / f"overlay_{self._epoch_id:05d}.png", bgr)
+            need_save = self._io_writer is not None and self.save_dir is not None and (self._epoch_id % 15 == 1 or self._epoch_id <= 3)
+            need_pub = self.pub_overlay.get_subscription_count() > 0
+            if need_save or need_pub:
+                bgr = render_overlay(
+                    wrist_vi.rgb_img if wrist_vi else None,
+                    side_vi.rgb_img if side_vi else None,
+                    epoch,
+                    tracks,
+                    self.cfg.block,
+                    third_rgb=third_vi.rgb_img if third_vi else None,
+                )
+                if need_pub:
+                    self.pub_overlay.publish(self.bridge.cv2_to_imgmsg(bgr, encoding="bgr8", header=header))
+                if need_save:
+                    self._io_writer.write_png(self.save_dir / "overlays" / f"overlay_{self._epoch_id:05d}.png", bgr)
 
         if self._io_writer is not None:
             self._io_writer.write_jsonl(json.dumps(payload))
