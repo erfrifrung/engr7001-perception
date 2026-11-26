@@ -20,7 +20,15 @@ ap.add_argument("--scenes", required=True)
 ap.add_argument("--method", required=True)
 ap.add_argument("--out", required=True)
 ap.add_argument("--repeat", type=int, default=1)
+# evidence (budget sweep): override the V3 wall-clock budgets / node cap; "inf" = no wall-clock limit
+ap.add_argument("--frame-budget-ms", default=None)
+ap.add_argument("--region-budget-ms", default=None)
+ap.add_argument("--max-nodes", type=int, default=None)
 args = ap.parse_args()
+
+
+def _ms(v):
+    return 1e9 if str(v).lower() in ("inf", "none", "unlimited") else float(v)
 sys.path.insert(0, str(Path(args.root).resolve()))
 
 from wp3_live import ViewInput, preset_config, run_perception_epoch  # noqa: E402
@@ -95,6 +103,12 @@ def method_cfg(m):
 
 index = json.loads((Path(args.scenes) / "index.json").read_text())
 cfg, pol = method_cfg(args.method)
+if args.frame_budget_ms is not None:
+    cfg.v3_frame_budget_ms = _ms(args.frame_budget_ms)
+if args.region_budget_ms is not None:
+    cfg.v3_region_budget_ms = _ms(args.region_budget_ms)
+if args.max_nodes is not None:
+    cfg.v3_max_nodes = int(args.max_nodes)
 with open(args.out, "w") as fh:
     for rep in range(args.repeat):
         for k, sc in enumerate(index):
@@ -116,5 +130,8 @@ with open(args.out, "w") as fh:
                          for f, s in zip(r.poses, r.pose_sources)]
                 amb = [dict(xy=list(a.xy_m), reason=a.reason) for a in r.ambiguous_clusters]
                 timings = r.stage_timings_ms
+                v3 = next((s["v3"] for s in (r.evidence_log or {}).get("split_logs", [])
+                           if isinstance(s, dict) and "v3" in s), None)
             fh.write(json.dumps(dict(file=sc["file"], rep=rep, method=args.method, poses=poses, amb=amb,
-                                     timings=timings, wall_ms=round((time.perf_counter() - t0) * 1000, 3))) + "\n")
+                                     timings=timings, wall_ms=round((time.perf_counter() - t0) * 1000, 3),
+                                     v3=v3 if args.method != "naive" else None)) + "\n")
