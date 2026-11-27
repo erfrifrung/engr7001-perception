@@ -1,8 +1,38 @@
 # ENGR7001 robotic perception
 
-This project estimates the poses of tabletop blocks and tracks them for intent-aware shared manipulation. The ROS 2 perception nodes publish observations and RViz displays.
+WP3 estimates and tracks tabletop block poses for intent-aware shared manipulation in Lancaster University's ENGR7001 Project 7. The ROS 2 perception node publishes observations and RViz displays for the xArm 6 tabletop task.
 
-[`versions/v2/`](versions/v2/) is the maintained version. The other version folders are archived snapshots.
+[Development guide](docs/ITERATIONS.md) | [Recorded lab demo](#recorded-lab-demo) | [Point clouds](#point-clouds) | [Setup and replay](SETUP.md)
+
+![Rendered RGB-D views and table-frame point-cloud projections for two flush blocks](media/wp3-synthetic-point-clouds.png)
+
+The top faces of these synthetic 75 × 25 × 15 mm blocks sit at the same height. Visible RGB seams and block ends give additional evidence for the split.
+
+## WP3 perception at V3.2 (`v3.2-candidate-2`)
+
+WP3 uses a wrist-mounted RealSense and two fixed RealSense cameras to estimate block poses for a Jenga-style manipulation task in ROS 2 Jazzy. The perception node publishes block poses and a scene snapshot. The WP2 bridge updates the MoveIt planning scene from those observations.
+
+| Version | What changed |
+|---|---|
+| V2 | Added the three-view M1 path, with a third camera to corroborate block boundaries. |
+| V3.1 | Added the opt-in V3 region stage and corrected frame handling and publish timestamps. On fake-hardware MoveIt, Hazem's original WP2 bridge passed 10 of 13 checks. The patched bridge passed all 13. |
+| V3.2 | Fixed three failures found in the 26 November lab session and added CPU optimisations for the Ryzen 5 5600. The new behaviours can be toggled at runtime for comparisons. |
+
+1. **Duplicate tracks.** A soak run produced 3,203 IDs for three objects. V3.2 merges tracks on the same layer when their spacing is too small for two physical blocks.
+2. **Hidden blocks.** V3.1 removed a block from MoveIt after more than three seconds out of view. V3.2 keeps an unseen block until three consecutive frames show its footprint empty or it reaches 60 seconds unseen.
+3. **Stale calibration.** V3.2 rereads `/tf_static` once a second, checks each camera's table plane and adds a session-start drift check. A changed fit starts a new calibration epoch, which resets the tracks and prompts the patched bridge to clear the old-calibration obstacles.
+
+The first table-plane thresholds rejected a correctly calibrated tripod camera because oblique depth measurements tilted the estimated plane by 4.7°. The revised check measures height offset at the centre of the workspace. A regression test covers the recorded tripod case.
+
+The CPU changes reproduced the previous solver results on 168 held-out synthetic scenes with an unbounded solver budget. Of 312 blocks, the V2 path published 86, V3 `enumerate` published 175, and V3 `prove` published 190. No published blocks were scored as wrong. The release check recorded 98 passing tests and two expected failures documenting known hazards. The zero-MoveIt audit passed, and the patched bridge passed all 13 fake-hardware MoveIt checks.
+
+Live validation with printed blocks is in progress. Open items include oblique depth bias of about +5 to +9 mm, p95 latency around 230–300 ms, block-like clutter and the choice of threading defaults.
+
+Shadi Hamadamin developed WP3 perception and worked with Hazem on the WP2 twin bridge. Ant Royster led the WP5 planning and fixtures work.
+
+- [V3 notes and evidence](https://github.com/erfrifrung/engr7001-perception/blob/v3.2-candidate-2/versions/v3/README.md)
+- [Twin integration setup](https://github.com/erfrifrung/engr7001-perception/blob/docs-v3.2/versions/v3/docs/TWIN_INTEGRATION_SETUP.md) and [V3.2 lab test sheet](https://github.com/erfrifrung/engr7001-perception/blob/docs-v3.2/versions/v3/docs/LAB_SHEET_V32.md)
+- [Lab runbook](https://github.com/erfrifrung/engr7001-perception/blob/v3.2-candidate-2/versions/v3/docs/LAB_RUNBOOK.md), [fault matrix](https://github.com/erfrifrung/engr7001-perception/blob/v3.2-candidate-2/versions/v3/docs/FAULT_MATRIX.md) and [WP3 interface specification](https://github.com/erfrifrung/engr7001-perception/blob/v3.2-candidate-2/versions/v3/docs/INTERFACE_SPEC_V1.md)
 
 ## Recorded lab demo
 
@@ -22,6 +52,10 @@ A separate stationary recording from 12 November 2026 shows the three lab RGB st
 | [V2 three-view candidate](versions/v2-three-view/) | Option to corroborate seams with a third fixed view, plus checkerboard registration tools. |
 | [V2 three-view handoff iteration](versions/v2-three-view-handoff/) | Follow-on snapshot from the expanded handoff, with changes to multi-view cut verification, replay, caching, diagnostics and tests. |
 | [WP3 twin integration](integration/) | RViz configuration and the discrete WP3 additions for frame fitting and a trial multi-block receiver. |
+
+## Point clouds
+
+Download the [wrist view](media/wp3-synthetic-wrist.ply) and [fixed view](media/wp3-synthetic-fixed.ply) to inspect them together. Both use metres in the same synthetic table frame. The [development guide](docs/ITERATIONS.md) shows how to regenerate them and compares detector output with and without a clear verification view.
 
 ## Replay evaluation (V2)
 
