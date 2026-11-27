@@ -571,7 +571,8 @@ def filter_robot_links_fast(
     return pts[keep], (rgb[keep] if rgb is not None else None), removed
 
 
-_FAST_TABLES: dict[tuple, tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
+_FAST_CROP_TABLES: dict[tuple, tuple[np.ndarray, np.ndarray]] = {}
+_FAST_TABLES: dict[tuple, list] = {}
 
 
 def deproject_roi_points_fast(
@@ -592,9 +593,8 @@ def deproject_roi_points_fast(
 ) -> dict:
     """V3 profiled fast path of ``deproject_roi_points`` (same outputs, same point order).
 
-    Flattened per-(transform, crop, stride) table-frame ray and pixel-index tables replace 2-D fancy indexing;
-    integer depth gating happens before any float conversion.  Falls back to the V2 function whenever camera-
-    frame points are needed or the depth is not integer.
+    Separates crop-only camera-frame ray tables from transform-specific rotated tables, filtering valid depth
+    pixels BEFORE transforming points so first-hit / moving-wrist frames never transform invalid pixels.
     """
     if need_pts_cam or T_table_cam is None or not np.issubdtype(depth_raw.dtype, np.integer):
         return deproject_roi_points(depth_raw, rgb_img, cam, T_table_cam, roi_xyz_min, roi_xyz_max,
@@ -616,28 +616,59 @@ def deproject_roi_points_fast(
     else:
         u0, v0, u1, v1 = 0, 0, W, H
     su0, sv0 = (u0 // stride) * stride, (v0 // stride) * stride
-    T = np.asarray(T_table_cam, dtype=np.float64).reshape(4, 4)
-    key = (id(cam), cam.width, cam.height, tuple(np.round(T.ravel(), 7).tolist()), sv0, v1, su0, u1, stride)
-    tab = _FAST_TABLES.get(key)
-    if tab is None:
-        R = T[:3, :3].astype(np.float32)
-        rays = np.ascontiguousarray(cam.rays_f32[sv0:v1:stride, su0:u1:stride]).reshape(-1, 3) @ R.T
+    crop_frac = float((u1 - u0) * (v1 - v0)) / max(1, W * H)
+
+    crop_key = (id(cam), cam.width, cam.height, sv0, v1, su0, u1, stride)
+    ctab = _FAST_CROP_TABLES.get(crop_key)
+    if ctab is None:
+        rays_cam_sub = np.ascontiguousarray(cam.rays_f32[sv0:v1:stride, su0:u1:stride], dtype=np.float32).reshape(-1, 3)
         vv, uu = np.mgrid[sv0:v1:stride, su0:u1:stride]
         pix = (vv * W + uu).ravel().astype(np.int64)
-        tab = (np.ascontiguousarray(rays, dtype=np.float32), pix, T[:3, 3].astype(np.float32))
-        if len(_FAST_TABLES) > 16:
-            _FAST_TABLES.clear()
-        _FAST_TABLES[key] = tab
-    rays_t, pix, t = tab
+        ctab = (rays_cam_sub, pix)
+        if len(_FAST_CROP_TABLES) > 32:
+            _FAST_CROP_TABLES.pop(next(iter(_FAST_CROP_TABLES)))
+        _FAST_CROP_TABLES[crop_key] = ctab
+    rays_cam_sub, pix = ctab
+
     d = depth_raw.reshape(-1)[pix]
     min_u = max(1, int(np.floor(min_depth_m / cam.depth_scale_m)))
     max_u = int(np.ceil(max_depth_m / cam.depth_scale_m)) + 1
     idx = np.flatnonzero((d >= min_u) & (d <= max_u))
+    if len(idx) == 0:
+        return {"bbox_2d": (u0, v0, u1, v1), "pts_cam_f32": np.zeros((0, 3), np.float32),
+                "pts_tbl_f32": np.zeros((0, 3), np.float32), "rgb_u8": np.zeros((0, 3), np.uint8),
+                "crop_frac": crop_frac}
     dm = d[idx].astype(np.float32) * np.float32(cam.depth_scale_m)
     keep_d = (dm > min_depth_m) & (dm < max_depth_m)
     if not bool(keep_d.all()):
         idx, dm = idx[keep_d], dm[keep_d]
-    pts = rays_t[idx] * dm[:, None] + t
+    if len(idx) == 0:
+        return {"bbox_2d": (u0, v0, u1, v1), "pts_cam_f32": np.zeros((0, 3), np.float32),
+                "pts_tbl_f32": np.zeros((0, 3), np.float32), "rgb_u8": np.zeros((0, 3), np.uint8),
+                "crop_frac": crop_frac}
+
+    T = np.asarray(T_table_cam, dtype=np.float64).reshape(4, 4)
+    tkey = (crop_key, tuple(np.round(T.ravel(), 7).tolist()))
+    entry = _FAST_TABLES.get(tkey)
+    if entry is None:
+        R_f32 = np.ascontiguousarray(T[:3, :3], dtype=np.float32)
+        t_f32 = np.ascontiguousarray(T[:3, 3], dtype=np.float32)
+        entry = [1, None, R_f32, t_f32]
+        if len(_FAST_TABLES) > 32:
+            _FAST_TABLES.pop(next(iter(_FAST_TABLES)))
+        _FAST_TABLES[tkey] = entry
+        pts = (rays_cam_sub[idx] @ R_f32.T) * dm[:, None] + t_f32
+    else:
+        entry[0] += 1
+        rays_t, R_f32, t_f32 = entry[1], entry[2], entry[3]
+        if rays_t is None and entry[0] >= 2:
+            rays_t = np.ascontiguousarray(rays_cam_sub @ R_f32.T, dtype=np.float32)
+            entry[1] = rays_t
+        if rays_t is not None:
+            pts = rays_t[idx] * dm[:, None] + t_f32
+        else:
+            pts = (rays_cam_sub[idx] @ R_f32.T) * dm[:, None] + t_f32
+
     lo = np.asarray(roi_xyz_min, np.float32)
     hi = np.asarray(roi_xyz_max, np.float32)
     inb = ((pts[:, 0] >= lo[0]) & (pts[:, 0] <= hi[0]) & (pts[:, 1] >= lo[1]) & (pts[:, 1] <= hi[1])
@@ -648,5 +679,5 @@ def deproject_roi_points_fast(
            else np.zeros((len(pts), 3), np.uint8))
     return {"bbox_2d": (u0, v0, u1, v1), "pts_cam_f32": np.zeros((0, 3), np.float32),
             "pts_tbl_f32": np.ascontiguousarray(pts, dtype=np.float32), "rgb_u8": rgb,
-            "crop_frac": float((u1 - u0) * (v1 - v0)) / max(1, W * H)}
+            "crop_frac": crop_frac}
 

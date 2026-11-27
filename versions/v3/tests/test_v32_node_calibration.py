@@ -112,3 +112,79 @@ def test_v31_behaviour_keeps_the_old_transform_for_the_node_lifetime():
         assert node.cfg.calib_epoch == "calib_A"
     finally:
         _close(node)
+
+
+def test_parked_wrist_static_tf_recalibrates_until_joint_states_arrives():
+    from sensor_msgs.msg import CameraInfo, Image, JointState
+
+    rclpy.init()
+    node = driver = None
+    try:
+        driver = rclpy.create_node("wp3_wrist_tf_driver")
+        node = WP3LivePerceptionNode(parameter_overrides=[
+            Parameter("static_tf_refresh_s", Parameter.Type.DOUBLE, 0.3),
+            Parameter("event_driven_wakeup", Parameter.Type.BOOL, False),
+        ])
+        node.cfg.calib_epoch = "calib_A"
+        node._calib_base = "calib_A"
+        qos = QoSProfile(reliability=ReliabilityPolicy.RELIABLE, durability=DurabilityPolicy.TRANSIENT_LOCAL,
+                         history=HistoryPolicy.KEEP_LAST, depth=1)
+        pub = driver.create_publisher(TFMessage, "/tf_static", qos)
+        ex = SingleThreadedExecutor()
+        ex.add_node(driver)
+        ex.add_node(node)
+
+        frame = "wrist_c_color_optical_frame"
+        cinfo = CameraInfo()
+        cinfo.width, cinfo.height = 64, 48
+        cinfo.k = [60.0, 0.0, 32.0, 0.0, 60.0, 24.0, 0.0, 0.0, 1.0]
+        cinfo.header.frame_id = frame
+        node._on_cinfo("wrist", cinfo)
+
+        def push_pair():
+            now_msg = node.get_clock().now().to_msg()
+            rgb = Image(width=64, height=48, encoding="rgb8", step=64 * 3, data=bytes(64 * 48 * 3))
+            dep = Image(width=64, height=48, encoding="16UC1", step=64 * 2, data=bytes(64 * 48 * 2))
+            rgb.header.stamp = dep.header.stamp = now_msg
+            node._on_img("wrist", "rgb", rgb)
+            node._on_img("wrist", "depth", dep)
+
+        def select_until(x_expected, timeout_s=2.0):
+            end = time.monotonic() + timeout_s
+            while time.monotonic() < end:
+                push_pair()
+                ex.spin_once(timeout_sec=0.02)
+                sel, _ = node._select_pair("wrist", node._now_s())
+                if sel is not None and sel["T_tc"] is not None and abs(sel["T_tc"][0, 3] - x_expected) < 1e-6:
+                    return sel
+            return None
+
+        pub.publish(_tf(frame, 0.10))
+        assert select_until(0.10) is not None
+        f = BlockFit(xy_m=(0.0, 0.0), z_center_m=0.0075, z_top_m=0.015, yaw_rad=0.0, yaw_deg_mod=0.0,
+                     dims_mm=(75.0, 25.0), fill=1.0, size_err=0.0, n_points=500, points_xyz=np.zeros((0, 3)),
+                     covariance_xy_m2=None)
+        node.tracker.update([f], ["test"], 1, node._now_s(), side_fresh_global=True)
+        assert len(node.tracker._tracks) == 1
+
+        # Parked wrist (no /joint_states): /tf_static change starts #r1 and clears old tracks
+        pub.publish(_tf(frame, 0.14))
+        time.sleep(0.35)
+        assert select_until(0.14) is not None
+        assert node.cfg.calib_epoch == "calib_A#r1"
+        assert len(node.tracker._tracks) == 0
+
+        # Once /joint_states arrives, wrist switches to dynamic TF lookup and leaves calib_epoch unchanged
+        node._on_joint_states(JointState())
+        node.tracker.update([f], ["test"], 2, node._now_s(), side_fresh_global=True)
+        pub.publish(_tf(frame, 0.18))
+        time.sleep(0.35)
+        assert select_until(0.18) is not None
+        assert node.cfg.calib_epoch == "calib_A#r1"
+        assert len(node.tracker._tracks) == 1
+    finally:
+        if node is not None:
+            node.destroy_node()
+        if driver is not None:
+            driver.destroy_node()
+        rclpy.try_shutdown()

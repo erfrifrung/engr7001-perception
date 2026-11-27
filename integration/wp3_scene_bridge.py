@@ -69,6 +69,7 @@ class WP3SceneBridge(Node):
             # not, an empty marker snapshot means "cannot see", not "blocks left", so removals are held.
             self.create_subscription(String, args.health_topic, self.on_health, qos)
         self._health = None            # (monotonic time, ok) from /wp3_live/health; None = never received (mock)
+        self._calib_epoch = None
         self.last_warn = {}
         self.pending_demo_removal = args.remove_demo_block
         self._was_attached = set()     # objects in the gripper at the previous flush
@@ -104,6 +105,14 @@ class WP3SceneBridge(Node):
             h = json.loads(msg.data)
         except Exception:
             return
+        ep = h.get('calibration_epoch')
+        if ep:
+            prev_ep = getattr(self, '_calib_epoch', None)
+            self._calib_epoch = ep
+            if prev_ep is not None and ep != prev_ep:
+                self.tracker.delete_all()
+                if hasattr(self, 'get_logger'):
+                    self.get_logger().info(f'calibration_epoch changed ({prev_ep} -> {ep}): clearing old-calibration poses')
         ok = h.get('status', 'ok') == 'ok' and h.get('fallback_mode') not in ('no_valid_stream', None)
         self._health = (time.monotonic(), ok)
 
@@ -162,6 +171,14 @@ class WP3SceneBridge(Node):
             self.warn('status', f'WP3 status "{status}" (calibration_epoch={payload.get("calibration_epoch")}): '
                                 f'scene not updated')
             return
+        ep = payload.get('calibration_epoch')
+        if ep:
+            prev_ep = getattr(self, '_calib_epoch', None)
+            self._calib_epoch = ep
+            if prev_ep is not None and ep != prev_ep:
+                self.tracker.delete_all()
+                if hasattr(self, 'get_logger'):
+                    self.get_logger().info(f'calibration_epoch changed ({prev_ep} -> {ep}): clearing old-calibration poses')
         frame_id = payload.get('frame_id', 'jenga_table')
         # Every live track (MEASURED, DISPLACED, OCCLUDED, STALE) is listed in each atomic snapshot. A track that
         # is missing has been retired by WP3, so its collision object is removed.

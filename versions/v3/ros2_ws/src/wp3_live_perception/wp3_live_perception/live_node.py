@@ -84,6 +84,7 @@ class WP3LivePerceptionNode(Node):
     def __init__(self, *, parameter_overrides=None) -> None:
         self._io_writer = None
         self._mask_worker = None
+        self._pair_gc = None
         self._gc_frozen = False
         self._gc_we_disabled = False
         super().__init__("wp3_live_node", parameter_overrides=parameter_overrides or [])
@@ -114,6 +115,10 @@ class WP3LivePerceptionNode(Node):
         self.declare_parameter("static_tf_refresh_s", 1.0)
         # V3.2: per-camera table-plane check against the calibration; a camera in "mismatch" is not fused.
         self.declare_parameter("calibration_check", True)
+        # V3.2: optional tracker runtime switches ("" = keep JSON/dataclass default) & event-driven wakeup
+        self.declare_parameter("tracker_merge_overlapping", "")
+        self.declare_parameter("retire_on_observed_free", "")
+        self.declare_parameter("event_driven_wakeup", True)
 
         cfg_path = str(self.get_parameter("config").value)
         self.policy = str(self.get_parameter("policy").value)
@@ -152,6 +157,19 @@ class WP3LivePerceptionNode(Node):
         refresh = float(self.get_parameter("static_tf_refresh_s").value)
         self.static_tf_refresh_s = refresh if refresh > 0.0 else None
         self.calibration_check = bool(self.get_parameter("calibration_check").value)
+
+        def _opt_bool(param_name: str, key: str) -> None:
+            val = str(self.get_parameter(param_name).value).strip().lower()
+            if val in ("true", "1", "on"):
+                overrides[key] = True
+            elif val in ("false", "0", "off"):
+                overrides[key] = False
+            elif val:
+                raise ValueError(f"{param_name} must be boolean or empty, got {val!r}")
+
+        _opt_bool("tracker_merge_overlapping", "tracker_merge_overlapping")
+        _opt_bool("retire_on_observed_free", "retire_on_observed_free")
+        self.event_driven_wakeup = bool(self.get_parameter("event_driven_wakeup").value)
         self.calib_monitor = CalibrationMonitor()
         self.cfg = load_runtime_config(cfg_path, overrides=overrides)
         self._calib_base = self.cfg.calib_epoch
@@ -209,6 +227,10 @@ class WP3LivePerceptionNode(Node):
         self._last_pub_wall_s = -1.0
         self._cached_robot_links: tuple[float, dict] | None = None
         self._epoch_id = 0
+        self._has_joint_states = False
+        self._last_triggered_stamp_ns = -1
+        self._last_tick_end_ns = 0
+        self._min_trigger_gap_ns = int(0.80e9 / rate_hz)
 
         self._sensor_cb_group = ReentrantCallbackGroup()
         self._tick_cb_group = MutuallyExclusiveCallbackGroup()
@@ -238,8 +260,10 @@ class WP3LivePerceptionNode(Node):
         self.pub_overlay = self.create_publisher(Image, "/wp3_live/overlay", 1)
 
         self.create_timer(1.0 / rate_hz, self._tick, callback_group=self._tick_cb_group)
+        if self.event_driven_wakeup:
+            self._pair_gc = self.create_guard_condition(self._tick, callback_group=self._tick_cb_group)
         self.get_logger().info(
-            f"wp3_live_node started (policy={self.policy}, wrist={self.wrist_ns}, side={self.side_ns}, third={self.third_ns or 'disabled'}, display-only)"
+            f"wp3_live_node started (policy={self.policy}, wrist={self.wrist_ns}, side={self.side_ns}, third={self.third_ns or 'disabled'}, event_wakeup={self.event_driven_wakeup}, display-only)"
         )
 
     def _now_s(self) -> float:
@@ -248,17 +272,34 @@ class WP3LivePerceptionNode(Node):
     def _on_img(self, role: str, kind: str, msg: Image) -> None:
         rx_ns = self.get_clock().now().nanoseconds
         stamp_ns = _stamp_ns(msg.header.stamp)
+        trigger = False
         with self._latest_lock:
             images = self._latest[role][kind]
             images[stamp_ns] = (rx_ns, msg)
             if len(images) > 6:
                 del images[next(iter(images))]
+            if self._pair_gc is not None and (
+                role == "wrist" or (role == "side" and not self._latest["wrist"]["rgb"])
+            ):
+                rbuf = self._latest[role]
+                if (
+                    stamp_ns in rbuf["rgb"]
+                    and stamp_ns in rbuf["depth"]
+                    and rbuf["cinfo"] is not None
+                    and stamp_ns != self._last_triggered_stamp_ns
+                    and (rx_ns - self._last_tick_end_ns) >= self._min_trigger_gap_ns
+                ):
+                    self._last_triggered_stamp_ns = stamp_ns
+                    trigger = True
+        if trigger and self._pair_gc is not None:
+            self._pair_gc.trigger()
 
     def _on_cinfo(self, role: str, msg: CameraInfo) -> None:
         with self._latest_lock:
             self._latest[role]["cinfo"] = msg
 
     def _on_joint_states(self, msg: JointState) -> None:
+        self._has_joint_states = True
         s = _stamp_ns(msg.header.stamp) * 1e-9
         self.dwell_gate.push_joint_state(s if s > 0 else self._now_s(), np.asarray(msg.position, dtype=np.float64))
 
@@ -387,13 +428,14 @@ class WP3LivePerceptionNode(Node):
             cinfo.header.frame_id or f"{role}_color_optical_frame",
             cam_profile.depth_scale_m,
         )
-        # Dynamic TF lookup for wrist if non-static, cached TF for tripod
+        # Dynamic TF lookup for wrist when /joint_states is active; when parked without FK, monitor /tf_static
+        use_static_tf = (role != "wrist") or (not self._has_joint_states and self.static_tf_refresh_s is not None)
         T_tc = self._lookup_mat(
             self.cfg.frame_id,
             cam.frame_id,
-            msg_rgb.header.stamp if role == "wrist" else None,
-            static=(role != "wrist"),
-            timeout_s=0.005 if role == "wrist" else 0.0,
+            None if use_static_tf else msg_rgb.header.stamp,
+            static=use_static_tf,
+            timeout_s=0.0 if use_static_tf else 0.005,
         )
         if role == "third" and T_tc is None:
             return None, {"status": "missing_table_tf", "tf_valid": False}
@@ -573,6 +615,7 @@ class WP3LivePerceptionNode(Node):
             "epoch_id": self._epoch_id,
             "tick_start_ns": now_ns,
             "publish_stamp_ns": publish_ns,
+            "calibration_epoch": self.cfg.calib_epoch,
             "status": epoch.status,
             "dwell_reason": epoch.dwell.reason if epoch.dwell else None,
             "fallback_mode": epoch.fallback_mode,
@@ -613,6 +656,7 @@ class WP3LivePerceptionNode(Node):
                 self._gc_we_disabled = True
             elif self._epoch_id % 15 == 0:
                 gc.collect(0)
+        self._last_tick_end_ns = self.get_clock().now().nanoseconds
 
     def _publish_detections(self, header: Header, tracks) -> None:
         arr = Detection3DArray(header=header)
@@ -681,6 +725,9 @@ class WP3LivePerceptionNode(Node):
         self.pub_markers.publish(arr)
 
     def destroy_node(self) -> bool:
+        if getattr(self, "_pair_gc", None) is not None:
+            self.destroy_guard_condition(self._pair_gc)
+            self._pair_gc = None
         if getattr(self, "_gc_we_disabled", False):
             gc.enable()
             self._gc_we_disabled = False
@@ -696,7 +743,7 @@ class WP3LivePerceptionNode(Node):
 def main(args=None) -> None:
     rclpy.init(args=args)
     node = WP3LivePerceptionNode()
-    executor = MultiThreadedExecutor(num_threads=2)
+    executor = MultiThreadedExecutor(num_threads=3)
     executor.add_node(node)
     try:
         executor.spin()

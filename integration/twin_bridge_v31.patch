@@ -120,10 +120,10 @@ index 6554b0c..149c983 100755
              if self.remove_s is not None and age > self.remove_s:
                  if key in self.applied:
 diff --git a/ros/wp3_scene_bridge.py b/ros/wp3_scene_bridge.py
-index 4d57323..d00c346 100755
+index 4d57323..fadbfba 100755
 --- a/ros/wp3_scene_bridge.py
 +++ b/ros/wp3_scene_bridge.py
-@@ -65,8 +65,14 @@ class WP3SceneBridge(Node):
+@@ -65,8 +65,15 @@ class WP3SceneBridge(Node):
          else:
              self.create_subscription(MarkerArray, args.topic, self.on_markers, qos)
              self.get_logger().info(f'listening on {args.topic} (ns={args.ns}); blocks go into frame "{self.frame}"')
@@ -131,6 +131,7 @@ index 4d57323..d00c346 100755
 +            # not, an empty marker snapshot means "cannot see", not "blocks left", so removals are held.
 +            self.create_subscription(String, args.health_topic, self.on_health, qos)
 +        self._health = None            # (monotonic time, ok) from /wp3_live/health; None = never received (mock)
++        self._calib_epoch = None
          self.last_warn = {}
          self.pending_demo_removal = args.remove_demo_block
 +        self._was_attached = set()     # objects in the gripper at the previous flush
@@ -138,7 +139,7 @@ index 4d57323..d00c346 100755
  
      # ------------------------------------------------------------------ helpers
      def warn(self, key, text, every=5.0):
-@@ -93,14 +99,35 @@ class WP3SceneBridge(Node):
+@@ -93,14 +100,43 @@ class WP3SceneBridge(Node):
          return tuple(float(v) for v in xyz), quat_from_matrix(R)
  
      # ------------------------------------------------------------------ input
@@ -147,6 +148,14 @@ index 4d57323..d00c346 100755
 +            h = json.loads(msg.data)
 +        except Exception:
 +            return
++        ep = h.get('calibration_epoch')
++        if ep:
++            prev_ep = getattr(self, '_calib_epoch', None)
++            self._calib_epoch = ep
++            if prev_ep is not None and ep != prev_ep:
++                self.tracker.delete_all()
++                if hasattr(self, 'get_logger'):
++                    self.get_logger().info(f'calibration_epoch changed ({prev_ep} -> {ep}): clearing old-calibration poses')
 +        ok = h.get('status', 'ok') == 'ok' and h.get('fallback_mode') not in ('no_valid_stream', None)
 +        self._health = (time.monotonic(), ok)
 +
@@ -174,7 +183,7 @@ index 4d57323..d00c346 100755
              if m.action == Marker.DELETE:
                  self.tracker.delete(key)
                  continue
-@@ -112,8 +139,14 @@ class WP3SceneBridge(Node):
+@@ -112,8 +148,14 @@ class WP3SceneBridge(Node):
                  continue
              w = self.to_world(m.header.frame_id, m.pose)
              if w is None:
@@ -190,7 +199,7 @@ index 4d57323..d00c346 100755
  
      def on_scene_json(self, msg):
          now = time.monotonic()
-@@ -122,11 +155,23 @@ class WP3SceneBridge(Node):
+@@ -122,11 +164,31 @@ class WP3SceneBridge(Node):
          except Exception as e:
              self.warn('json', f'invalid JSON on {self.args.scene_topic}: {e}')
              return
@@ -201,6 +210,14 @@ index 4d57323..d00c346 100755
 +            self.warn('status', f'WP3 status "{status}" (calibration_epoch={payload.get("calibration_epoch")}): '
 +                                f'scene not updated')
 +            return
++        ep = payload.get('calibration_epoch')
++        if ep:
++            prev_ep = getattr(self, '_calib_epoch', None)
++            self._calib_epoch = ep
++            if prev_ep is not None and ep != prev_ep:
++                self.tracker.delete_all()
++                if hasattr(self, 'get_logger'):
++                    self.get_logger().info(f'calibration_epoch changed ({prev_ep} -> {ep}): clearing old-calibration poses')
          frame_id = payload.get('frame_id', 'jenga_table')
 +        # Every live track (MEASURED, DISPLACED, OCCLUDED, STALE) is listed in each atomic snapshot. A track that
 +        # is missing has been retired by WP3, so its collision object is removed.
@@ -215,7 +232,7 @@ index 4d57323..d00c346 100755
              if self.args.commit_eligible_only and not tr.get('snapshot_commit_eligible', False):
                  continue
              tid = tr.get('track_id', 0)
-@@ -170,16 +215,26 @@ class WP3SceneBridge(Node):
+@@ -170,16 +232,26 @@ class WP3SceneBridge(Node):
              scene.world.collision_objects.append(
                  CollisionObject(id='jenga_block', operation=CollisionObject.REMOVE))
              self.pending_demo_removal = False
@@ -246,7 +263,7 @@ index 4d57323..d00c346 100755
              if kind in ('add', 'move'):
                  _, _, dims, xyz, quat = act
                  obj = CollisionObject(id=key, operation=CollisionObject.ADD)
-@@ -211,7 +266,8 @@ class WP3SceneBridge(Node):
+@@ -211,7 +283,8 @@ class WP3SceneBridge(Node):
                  for line in log:
                      self.get_logger().info(line)
              else:
@@ -256,7 +273,7 @@ index 4d57323..d00c346 100755
  
  
  def main():
-@@ -219,11 +275,19 @@ def main():
+@@ -219,11 +292,19 @@ def main():
      ap.add_argument('--topic', default=TOPIC)
      ap.add_argument('--scene-topic', default=SCENE_TOPIC)
      ap.add_argument('--use-scene-json', action='store_true', help='consume /wp3_live/scene_observation JSON directly')

@@ -201,3 +201,15 @@ def test_v32_config_defaults_and_json_switches(tmp_path):
     p.write_text('{"tracker_merge_overlapping": false, "retire_on_observed_free": false}')
     tr = tracker_from_config(load_runtime_config(str(p)))
     assert not tr.merge_overlapping and not tr.retire_on_observed_free
+
+
+def test_v32_displaced_block_stays_displaced_across_duplicate_merge():
+    tr = _tr32()
+    for k in range(5):
+        _step(tr, [_fit(0.0)], k)
+    out = _step(tr, [_fit(0.020)], 5)
+    assert out[0].state == "DISPLACED"
+    out = _step(tr, [_fit(0.020), _fit(0.021)], 6)
+    assert len(out) == 1 and out[0].track_id == 1
+    assert out[0].state == "DISPLACED"
+    assert tr.merged_total >= 1

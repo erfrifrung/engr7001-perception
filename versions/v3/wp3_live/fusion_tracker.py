@@ -388,7 +388,7 @@ class WP3TemporalTracker:
             )
 
         if self.merge_overlapping:
-            self._merge_physically_overlapping()
+            self._merge_physically_overlapping(target_shift_gate_m)
         if self.retire_on_observed_free:
             for tid in [t for t, tr in self._tracks.items() if tr.free_count >= self.free_confirm_frames]:
                 del self._tracks[tid]
@@ -401,7 +401,7 @@ class WP3TemporalTracker:
         # unknown height: never merge (a lost obstacle is worse than a duplicate one)
         return bool(np.isfinite(dz)) and dz <= 0.6 * float(self.block.height_m)
 
-    def _merge_physically_overlapping(self) -> None:
+    def _merge_physically_overlapping(self, target_shift_gate_m: float = 0.008) -> None:
         """V3.2: two tracks on the same layer closer than 0.4 x block width are ONE physical block.
 
         Two real blocks on one layer cannot be closer than the block width (their inscribed circles would overlap),
@@ -427,12 +427,17 @@ class WP3TemporalTracker:
             _, keep_id, drop_id = best
             keep, drop = self._tracks[keep_id], self._tracks.pop(drop_id)
             newest = drop if drop.last_seen_s > keep.last_seen_s else keep
+            shift_m = float(np.hypot(newest.fit.xy_m[0] - keep.anchor_xy_m[0], newest.fit.xy_m[1] - keep.anchor_xy_m[1]))
+            if newest.state in ("MEASURED", "DISPLACED"):
+                merged_state = "DISPLACED" if shift_m >= target_shift_gate_m else "MEASURED"
+            else:
+                merged_state = newest.state
             peers = (set(keep.ambiguous_peer_ids) | set(drop.ambiguous_peer_ids)) - {keep_id, drop_id}
             self._tracks[keep_id] = replace(
                 keep,
                 fit=newest.fit,
                 source=newest.source,
-                state=newest.state,
+                state=merged_state,
                 mds_score=min(keep.mds_score, drop.mds_score),
                 confirmed=bool(keep.confirmed and drop.confirmed),
                 observation_stamp_ns=max(keep.observation_stamp_ns, drop.observation_stamp_ns),

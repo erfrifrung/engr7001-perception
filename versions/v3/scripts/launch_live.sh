@@ -20,6 +20,12 @@ Options:
   --v3-solver S     prove | enumerate (only with --v3 on; default: config value)
   --v3-budget-ms MS V3 per-frame budget (default: config value)
   --temporal-skip on|off  Re-publish cached geometry on stationary frames (default: off)
+  --publish-overlay on|off     Publish/save overlay images (default: on)
+  --calibration-check on|off   V3.2 per-camera table-plane check (default: on)
+  --static-tf-refresh-s SEC    V3.2 /tf_static refresh period s, 0=lifetime cache (default: 1.0)
+  --retire-on-observed-free on|off  V3.2 retire unseen blocks only on empty heightmap (default: config)
+  --merge-overlapping on|off   V3.2 merge same-layer duplicate tracks (default: config)
+  --event-wakeup on|off        Trigger compute immediately on synced frame-pair arrival (default: on)
 Stop with Ctrl+C (SIGINT); Wait 1 s for JSONL flush.
 HELP
     exit 0
@@ -45,6 +51,12 @@ V3="false"
 V3_SOLVER=""
 V3_BUDGET="-1.0"
 TSKIP="false"
+PUB_OVERLAY="true"
+CAL_CHECK="true"
+TF_REFRESH_S="1.0"
+RETIRE_FREE=""
+MERGE_OVLP=""
+EVENT_WAKEUP="true"
 
 onoff() { case "$1" in on|true|1) echo true ;; off|false|0) echo false ;; *) echo "expected on|off, got $1" >&2; exit 2 ;; esac; }
 
@@ -61,6 +73,12 @@ while [[ $# -gt 0 ]]; do
         --v3-solver) V3_SOLVER="$2"; shift 2 ;;
         --v3-budget-ms) V3_BUDGET="$2"; shift 2 ;;
         --temporal-skip) TSKIP="$(onoff "$2")"; shift 2 ;;
+        --publish-overlay) PUB_OVERLAY="$(onoff "$2")"; shift 2 ;;
+        --calibration-check) CAL_CHECK="$(onoff "$2")"; shift 2 ;;
+        --static-tf-refresh-s) TF_REFRESH_S="$2"; shift 2 ;;
+        --retire-on-observed-free) RETIRE_FREE="$(onoff "$2")"; shift 2 ;;
+        --merge-overlapping) MERGE_OVLP="$(onoff "$2")"; shift 2 ;;
+        --event-wakeup) EVENT_WAKEUP="$(onoff "$2")"; shift 2 ;;
         *) echo "Unknown arg: $1" >&2; exit 2 ;;
     esac
 done
@@ -78,7 +96,7 @@ set -u
 export PYTHONPATH="$IMPL_ROOT:${PYTHONPATH:-}"
 mkdir -p "$SAVE_DIR"
 
-echo "Launching wp3_live_node (policy=$POLICY, config=$CONFIG, v3=$V3, temporal_skip=$TSKIP, save_dir=$SAVE_DIR)"
+echo "Launching wp3_live_node (policy=$POLICY, config=$CONFIG, v3=$V3, temporal_skip=$TSKIP, cal_check=$CAL_CHECK, wakeup=$EVENT_WAKEUP, save_dir=$SAVE_DIR)"
 echo "Stop cleanly with Ctrl+C."
 ros2 launch wp3_live_perception wp3_live.launch.py \
     policy:="$POLICY" \
@@ -92,4 +110,10 @@ ros2 launch wp3_live_perception wp3_live.launch.py \
     v3_solver:="$V3_SOLVER" \
     v3_frame_budget_ms:="$V3_BUDGET" \
     enable_temporal_skip:="$TSKIP" \
+    publish_overlay:="$PUB_OVERLAY" \
+    calibration_check:="$CAL_CHECK" \
+    static_tf_refresh_s:="$TF_REFRESH_S" \
+    tracker_merge_overlapping:="$MERGE_OVLP" \
+    retire_on_observed_free:="$RETIRE_FREE" \
+    event_driven_wakeup:="$EVENT_WAKEUP" \
     2>&1 | tee "$SAVE_DIR/live_node.log"

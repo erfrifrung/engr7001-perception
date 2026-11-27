@@ -327,17 +327,33 @@ def _build_slot_ray_cache(
             t_in = np.zeros(len(pts3), dtype=np.float64)
             t_out = np.zeros(len(pts3), dtype=np.float64)
             ray_scale = np.zeros(len(pts3), dtype=np.float64)
-            for k in np.flatnonzero(in_b):
-                ray_tbl = pts3[k] - cam_pos
-                ray_len = float(np.linalg.norm(ray_tbl))
-                if ray_len < 1e-4 or exp_z[k] < 1e-4:
-                    continue
-                slab = _ray_box_slab(o_loc, R_blk @ (ray_tbl / ray_len), half_ext)
-                if slab is None:
-                    continue
-                slab_ok[k] = True
-                t_in[k], t_out[k] = slab
-                ray_scale[k] = ray_len / float(exp_z[k])
+            in_idx = np.flatnonzero(in_b)
+            if len(in_idx):
+                rays_tbl = pts3[in_idx] - cam_pos
+                ray_len = np.linalg.norm(rays_tbl, axis=1)
+                ez_sub = exp_z[in_idx]
+                valid_r = (ray_len >= 1e-4) & (ez_sub >= 1e-4)
+                if np.any(valid_r):
+                    vi = in_idx[valid_r]
+                    rl = ray_len[valid_r]
+                    u_loc = (rays_tbl[valid_r] / rl[:, None]) @ R_blk.T
+                    par = np.abs(u_loc) < 1e-8
+                    miss = np.any(par & ((o_loc[None, :] < -half_ext[None, :]) | (o_loc[None, :] > half_ext[None, :])), axis=1)
+                    safe_u = np.where(par, 1.0, u_loc)
+                    inv_u = 1.0 / safe_u
+                    t1 = (-half_ext[None, :] - o_loc[None, :]) * inv_u
+                    t2 = (half_ext[None, :] - o_loc[None, :]) * inv_u
+                    t_lo = np.where(par, -1e9, np.minimum(t1, t2))
+                    t_hi = np.where(par, 1e9, np.maximum(t1, t2))
+                    t_min = np.maximum(-1e9, np.max(t_lo, axis=1))
+                    t_max = np.minimum(1e9, np.min(t_hi, axis=1))
+                    hit = (~miss) & (t_min <= t_max) & (t_max > 0.0)
+                    if np.any(hit):
+                        hi_idx = vi[hit]
+                        slab_ok[hi_idx] = True
+                        t_in[hi_idx] = np.maximum(0.0, t_min[hit])
+                        t_out[hi_idx] = t_max[hit]
+                        ray_scale[hi_idx] = rl[hit] / ez_sub[valid_r][hit]
 
             if int(np.count_nonzero(slab_ok)) < 4:
                 slot_specs.append({"kind": "unknown", "layer": layer, "slot": slot, "exp_range": float(np.mean(exp_z))})

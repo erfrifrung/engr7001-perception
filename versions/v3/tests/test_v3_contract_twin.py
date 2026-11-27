@@ -207,3 +207,22 @@ def test_bridge_skips_held_and_ineligible_tracks():
     b.tracker.observe = lambda key, *a, **k: calls.append(key)
     b.on_scene_json(types.SimpleNamespace(data=json.dumps(p)))
     assert calls == []
+
+
+def test_bridge_drops_held_poses_on_calibration_epoch_change():
+    base = _v3_payloads()[-1]
+    t0 = dict(base["tracks"][0], track_id=31, state="MEASURED", snapshot_commit_eligible=True)
+    t0_held = dict(t0, state="OCCLUDED", snapshot_commit_eligible=False)
+    t_new = dict(base["tracks"][0], track_id=32, state="MEASURED", snapshot_commit_eligible=True,
+                 pose_table_m=[0.06, 0.04, t0["pose_table_m"][2]])
+    b = _bridge(commit_eligible_only=False)
+    m1 = dict(base, calibration_epoch="calib_1", tracks=[t0], status="ok")
+    m2 = dict(base, calibration_epoch="calib_2", tracks=[t0_held, t_new], status="ok")
+    b.on_scene_json(types.SimpleNamespace(data=json.dumps(m1)))
+    acts1 = b.tracker.actions(time.monotonic())
+    assert {a[1] for a in acts1 if a[0] == "add"} == {"wp3_blocks_31"}
+    b.on_scene_json(types.SimpleNamespace(data=json.dumps(m2)))
+    acts2 = b.tracker.actions(time.monotonic())
+    assert ("remove", "wp3_blocks_31") in acts2
+    assert any(a[0] == "add" and a[1] == "wp3_blocks_32" for a in acts2)
+    assert not b.warns

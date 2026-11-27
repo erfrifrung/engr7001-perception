@@ -20,6 +20,7 @@ Both are bounded; a budget exit always means abstention for the affected blocks,
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import math
 import time
 from typing import Any, Callable
 
@@ -71,6 +72,13 @@ class Placement:
     cov_bits: int = 0                # OCCUPIED cells covered (expanded rectangle)
     int_bits: int = 0                # window cells inside the shrunk rectangle (overlap test)
     angle_key: float = 0.0
+    cos_yaw: float = float("nan")
+    sin_yaw: float = float("nan")
+
+    def __post_init__(self) -> None:
+        if math.isnan(self.cos_yaw):
+            self.cos_yaw = math.cos(self.yaw)
+            self.sin_yaw = math.sin(self.yaw)
 
 
 @dataclass
@@ -121,13 +129,17 @@ def refine_angle_deg(boundary_xy: np.ndarray, theta0_deg: float, span_deg: float
     """Rectilinear-boundary angle: maximise projection-histogram peakiness of boundary points (0.5 mm bins)."""
     if len(boundary_xy) < 20:
         return theta0_deg
+    ths = np.arange(theta0_deg - span_deg, theta0_deg + span_deg + 1e-9, 0.25, dtype=np.float64)
+    r = np.radians(ths)
+    cs, sn = np.cos(r), np.sin(r)
+    U = boundary_xy @ np.vstack((cs, sn))
+    V = boundary_xy @ np.vstack((-sn, cs))
+    iu_all = np.floor((U - U.min(axis=0)) / 0.0005).astype(np.int64)
+    iv_all = np.floor((V - V.min(axis=0)) / 0.0005).astype(np.int64)
     best, best_s = theta0_deg, -1.0
-    for th in np.arange(theta0_deg - span_deg, theta0_deg + span_deg + 1e-9, 0.25):
-        r = np.radians(th)
-        u = boundary_xy @ np.array([np.cos(r), np.sin(r)])
-        v = boundary_xy @ np.array([-np.sin(r), np.cos(r)])
-        hu = np.bincount(np.floor((u - u.min()) / 0.0005).astype(np.int64))
-        hv = np.bincount(np.floor((v - v.min()) / 0.0005).astype(np.int64))
+    for k, th in enumerate(ths):
+        hu = np.bincount(iu_all[:, k])
+        hv = np.bincount(iv_all[:, k])
         s = float((hu.astype(np.float64) ** 2).sum() + (hv.astype(np.float64) ** 2).sum())
         if s > best_s:
             best_s, best = s, float(th)
@@ -226,7 +238,7 @@ class RegionModel:
         self.stats: dict[str, Any] = {"placements": 0, "ray_rejected": 0, "nodes": 0, "angles": 0}
         self.last_truncated = False
         self._cache: dict[tuple[float, bool], tuple[list[Placement], np.ndarray, np.ndarray]] = {}
-        self._mats: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+        self._mats: dict[int, list[Any]] = {}
 
     _ANGLE_CHUNK = 6
 
@@ -253,7 +265,7 @@ class RegionModel:
                 covs.append(cv_)
                 inns.append(in_)
         if out:
-            self._mats[id(out)] = (np.concatenate(covs, 0), np.concatenate(inns, 0))
+            self._mats[id(out)] = [np.concatenate(covs, 0), np.concatenate(inns, 0), None]
         return out
 
     def placements_local(self, angles_deg: list[float], restrict: np.ndarray) -> list[Placement]:
@@ -263,13 +275,13 @@ class RegionModel:
             if pl:
                 out.extend(pl); covs.append(cv_); inns.append(in_)
         if out:
-            self._mats[id(out)] = (np.concatenate(covs, 0), np.concatenate(inns, 0))
+            self._mats[id(out)] = [np.concatenate(covs, 0), np.concatenate(inns, 0), None]
         return out
 
     def subset(self, places: list[Placement], keep: np.ndarray) -> list[Placement]:
-        C, I = self._mats[id(places)]
+        C, I, If = self._mats[id(places)]
         sub = [q for q, k in zip(places, keep) if k]
-        self._mats[id(sub)] = (C[keep], I[keep])
+        self._mats[id(sub)] = [C[keep], I[keep], If[keep] if If is not None else None]
         return sub
 
     def _placements_batch(self, angles_deg: list[float], restrict: np.ndarray | None = None
@@ -290,15 +302,18 @@ class RegionModel:
         nu, nv = int(iu.max()) + 2, int(iv.max()) + 2
         base = (np.arange(nA, dtype=np.int64)[:, None] * nu + iu) * nv + iv
         tot = nA * nu * nv
-        cnt_o = np.bincount(base[:, self.must].ravel(), minlength=tot).reshape(nA, nu, nv)
-        cnt_f = np.bincount(base[:, self.state == FREE].ravel(), minlength=tot).reshape(nA, nu, nv)
-        ii_o = np.zeros((nA, nu + 1, nv + 1)); ii_o[:, 1:, 1:] = cnt_o.cumsum(1).cumsum(2)
-        ii_f = np.zeros((nA, nu + 1, nv + 1)); ii_f[:, 1:, 1:] = cnt_f.cumsum(1).cumsum(2)
+        cnt_o = np.bincount(base[:, self.must].ravel(), minlength=tot).astype(np.int32).reshape(nA, nu, nv)
+        cnt_f = np.bincount(base[:, self.state == FREE].ravel(), minlength=tot).astype(np.int32).reshape(nA, nu, nv)
+        ii_o = np.zeros((nA, nu + 1, nv + 1), dtype=np.int32)
+        ii_o[:, 1:, 1:] = cnt_o.cumsum(1, dtype=np.int32).cumsum(2, dtype=np.int32)
+        ii_f = np.zeros((nA, nu + 1, nv + 1), dtype=np.int32)
+        ii_f[:, 1:, 1:] = cnt_f.cumsum(1, dtype=np.int32).cumsum(2, dtype=np.int32)
         if restrict is not None:      # keep only placements whose coverage rectangle touches a restricted must cell
             rmask = np.zeros(len(self.must), bool)
             rmask[self.must_idx[restrict]] = True
-            cnt_r = np.bincount(base[:, rmask].ravel(), minlength=tot).reshape(nA, nu, nv)
-            ii_r = np.zeros((nA, nu + 1, nv + 1)); ii_r[:, 1:, 1:] = cnt_r.cumsum(1).cumsum(2)
+            cnt_r = np.bincount(base[:, rmask].ravel(), minlength=tot).astype(np.int32).reshape(nA, nu, nv)
+            ii_r = np.zeros((nA, nu + 1, nv + 1), dtype=np.int32)
+            ii_r[:, 1:, 1:] = cnt_r.cumsum(1, dtype=np.int32).cumsum(2, dtype=np.int32)
         La, Wa = int(round(blk.major_m / b)), int(round(blk.minor_m / b))
         area_cells = blk.major_m * blk.minor_m / (self.cell_m ** 2)
         t = p.tol_bins
@@ -315,9 +330,9 @@ class RegionModel:
             ti0, tj0 = np.clip(I + t, 0, nu), np.clip(J + t, 0, nv)
             ti1, tj1 = np.clip(I + A - t, 0, nu), np.clip(J + B - t, 0, nv)
             def box(ii, a0, a1, b0, b1):
-                return (ii[:, a1][:, :, b1] - ii[:, a0][:, :, b1] - ii[:, a1][:, :, b0] + ii[:, a0][:, :, b0])
+                di = ii[:, a1] - ii[:, a0]
+                return di[:, :, b1] - di[:, :, b0]
             f_in = box(ii_f, ti0, ti1, tj0, tj1)
-            f_ex = box(ii_f, i0c, i1, j0c, j1)
             o_ex = box(ii_o, i0c, i1, j0c, j1)
             valid = (f_in <= p.max_free_cells) & (o_ex >= p.min_obs_frac * area_cells)
             if restrict is not None:
@@ -325,7 +340,10 @@ class RegionModel:
                 ei1, ej1 = np.clip(I + A + t, 0, nu), np.clip(J + B + t, 0, nv)
                 valid &= box(ii_r, ei0, ei1, ej0, ej1) > 0
             ai, ii_, jj_ = np.nonzero(valid)
-            sc = (o_ex - 3.0 * f_ex)[ai, ii_, jj_]
+            ia0, ia1 = i0c[ii_], i1[ii_]
+            jb0, jb1 = j0c[jj_], j1[jj_]
+            f_ex_v = ii_f[ai, ia1, jb1] - ii_f[ai, ia0, jb1] - ii_f[ai, ia1, jb0] + ii_f[ai, ia0, jb0]
+            sc = o_ex[ai, ii_, jj_].astype(np.float64) - 3.0 * f_ex_v.astype(np.float64)
             rows.append(np.stack([ai, I[ii_], J[jj_], np.full(len(ai), A), np.full(len(ai), B), sc], 1))
         R = np.concatenate(rows, 0) if rows else np.zeros((0, 6))
         out: dict[float, tuple[list[Placement], np.ndarray, np.ndarray]] = {
@@ -357,16 +375,20 @@ class RegionModel:
         inn = (ui >= k0 + t) & (ui < k0 + AA - t) & (uj >= l0 + t) & (uj < l0 + BB - t)
         cov_b = np.packbits(cov, axis=1, bitorder="little")
         int_b = np.packbits(inn, axis=1, bitorder="little")
+        yn = (yaw[keep] + np.pi / 2) % np.pi - np.pi / 2
+        c_yn = np.cos(yn)
+        s_yn = np.sin(yn)
         per: dict[int, list[int]] = {}
         for r, k in enumerate(keep):
             per.setdefault(int(ai[k]), []).append(r)
         for a_i, rr in per.items():
             rr_arr = np.asarray(rr)
+            ang_deg = float(angles_deg[a_i])
             pl = [Placement(float(cxp[keep[r]]), float(cyp[keep[r]]),
-                            float((yaw[keep[r]] + np.pi / 2) % np.pi - np.pi / 2), float(R[keep[r], 5]),
+                            float(yn[r]), float(R[keep[r], 5]),
                             int.from_bytes(cov_b[r].tobytes(), "little"), int.from_bytes(int_b[r].tobytes(), "little"),
-                            float(angles_deg[a_i])) for r in rr]
-            out[round(angles_deg[a_i], 3)] = (pl, cov[rr_arr], inn[rr_arr])
+                            ang_deg, float(c_yn[r]), float(s_yn[r])) for r in rr]
+            out[round(ang_deg, 3)] = (pl, cov[rr_arr], inn[rr_arr])
         self.stats["placements"] += len(keep)
         return out
 
@@ -377,7 +399,8 @@ class RegionModel:
         options are counted with placement bitsets; conflict rows are built lazily from the interior matrix."""
         if not places:
             return [], False
-        C, I = self._mats[id(places)]
+        mat_entry = self._mats[id(places)]
+        C, I = mat_entry[0], mat_entry[1]
         tcols = np.arange(C.shape[1]) if target is None else np.asarray(target)
         full = self.full if target is None else _bits(tcols)
         n_target = len(tcols)
@@ -387,19 +410,23 @@ class RegionModel:
         colbytes = np.packbits(C[:, tcols].T, axis=1, bitorder="little")
         uniq, inv = np.unique(colbytes, axis=0, return_inverse=True)
         inv = inv.ravel()
-        cls = []
-        for ci in range(len(uniq)):
-            cells = tcols[np.flatnonzero(inv == ci)]
-            cls.append((int.from_bytes(uniq[ci].tobytes(), "little"), _bits(cells)))
+        cbits_by_ci = [0] * len(uniq)
+        tcols_list = [int(x) for x in tcols]
+        for pos, ci in enumerate(inv.tolist()):
+            cbits_by_ci[ci] |= 1 << tcols_list[pos]
+        cls = [(int.from_bytes(uniq[ci].tobytes(), "little"), cbits_by_ci[ci]) for ci in range(len(uniq))]
         cov_bits = [q.cov_bits for q in places]
         max_cov = int(C[:, tcols].sum(axis=1).max())
         score = np.array([q.score for q in places])
-        If = I.astype(np.float32)
         conflict_cache: dict[int, int] = {}
 
         def conflicts(k: int) -> int:
             r = conflict_cache.get(k)
             if r is None:
+                If = mat_entry[2]
+                if If is None:
+                    If = I.astype(np.float32)
+                    mat_entry[2] = If
                 row = (If @ If[k]) > 0.5
                 row[k] = True
                 r = int.from_bytes(np.packbits(row, bitorder="little").tobytes(), "little")
@@ -590,11 +617,11 @@ class RegionModel:
             "seed": [(round(q.cx * 1000, 1), round(q.cy * 1000, 1), round(float(np.degrees(q.yaw)), 1)) for q in seed]}
 
     def _same_in_frame_of(self, a: Placement, b: Placement) -> bool:
-        d = abs((a.yaw - b.yaw + np.pi / 2) % np.pi - np.pi / 2)
-        if d > np.radians(self.p.invariance_yaw_deg):
+        d = abs((a.yaw - b.yaw + 0.5 * math.pi) % math.pi - 0.5 * math.pi)
+        if d > math.radians(self.p.invariance_yaw_deg):
             return False
         dx, dy = b.cx - a.cx, b.cy - a.cy
-        ca, sa = np.cos(a.yaw), np.sin(a.yaw)
+        ca, sa = a.cos_yaw, a.sin_yaw
         return abs(dx * ca + dy * sa) <= self.p.invariance_xy_m and abs(-dx * sa + dy * ca) <= self.p.invariance_xy_m
 
     def same(self, a: Placement, b: Placement) -> bool:

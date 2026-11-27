@@ -73,7 +73,11 @@ bash scripts/launch_live.sh --policy merged_corroborated --config <printed-block
 ros2 topic echo /wp3_live/health --once      # status ok, dwell_reason not fk_missing_or_moving
 ```
 
-To evaluate V3 live (not the M1 default): add `--v3 on --v3-solver prove --v3-budget-ms 45`.
+To evaluate V3 live (not the M1 default; based on the 26 Nov Ryzen budget sweep, use `enumerate` at `45 ms` or `prove` at `120 ms` — `prove` at `45 ms` times out on 150/168 regions):
+```bash
+bash scripts/launch_live.sh --policy merged_corroborated --third-ns /perception/third --v3 on --v3-solver enumerate --v3-budget-ms 45 --save-dir "$cal/live_v3"
+```
+Useful V3.2 runtime switches on `launch_live.sh` (all default to safe V3.2 settings; no rebuild required): `--calibration-check on|off`, `--static-tf-refresh-s SEC`, `--retire-on-observed-free on|off`, `--merge-overlapping on|off`, `--publish-overlay on|off`, `--event-wakeup on|off`.
 
 ## 4. Twin with live WP3 (Hazem)
 

@@ -33,6 +33,9 @@ def generate_launch_description() -> LaunchDescription:
         # V3.2: /tf_static re-read period (<= 0: cache for the node lifetime) and the per-camera plane check.
         DeclareLaunchArgument("static_tf_refresh_s", default_value="1.0"),
         DeclareLaunchArgument("calibration_check", default_value="true"),
+        DeclareLaunchArgument("tracker_merge_overlapping", default_value=""),
+        DeclareLaunchArgument("retire_on_observed_free", default_value=""),
+        DeclareLaunchArgument("event_driven_wakeup", default_value="true"),
         Node(
             package="wp3_live_perception",
             executable="wp3_live_node",
@@ -56,6 +59,9 @@ def generate_launch_description() -> LaunchDescription:
                 "reanchor_after": ParameterValue(LaunchConfiguration("reanchor_after"), value_type=int),
                 "static_tf_refresh_s": ParameterValue(LaunchConfiguration("static_tf_refresh_s"), value_type=float),
                 "calibration_check": ParameterValue(LaunchConfiguration("calibration_check"), value_type=bool),
+                "tracker_merge_overlapping": ParameterValue(LaunchConfiguration("tracker_merge_overlapping"), value_type=str),
+                "retire_on_observed_free": ParameterValue(LaunchConfiguration("retire_on_observed_free"), value_type=str),
+                "event_driven_wakeup": ParameterValue(LaunchConfiguration("event_driven_wakeup"), value_type=bool),
             }],
         ),
     ])

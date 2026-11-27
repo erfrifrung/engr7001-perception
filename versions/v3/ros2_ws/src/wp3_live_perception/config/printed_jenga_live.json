@@ -15,7 +15,7 @@
   "tcp_offset_z_m": 0.242,
   "enable_temporal_skip": true,
   "enable_partition_warm_start": true,
-  "enable_parallel_views": false,
+  "enable_parallel_views": true,
   "calib_epoch": "unverified_update_after_s01",
   "block": {
     "name": "printed_jenga",
